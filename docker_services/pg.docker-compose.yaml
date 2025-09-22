@@ -1,0 +1,19 @@
+# docker-compose.yml
+version: "3.9"
+
+services:
+  db:
+    image: ankane/pgvector:latest
+    container_name: chakravyuh_pgvector
+    restart: always
+    environment:
+      POSTGRES_USER: chakravyuh
+      POSTGRES_PASSWORD: chakravyuh
+      POSTGRES_DB: chakravyuh
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

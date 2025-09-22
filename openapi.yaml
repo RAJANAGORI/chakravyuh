@@ -1,0 +1,160 @@
+openapi: 3.1.0
+info:
+  title: Chakravyuh RAG API
+  version: "1.0.0"
+  description: >
+    Retrieval-Augmented Generation API with pgvector + LangChain.
+    Provides search, filtered search, and LLM-powered Q&A.
+servers:
+  - url: http://127.0.0.1:8000
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns API status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /search:
+    get:
+      summary: Search top-k chunks
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          required: true
+          description: Search query
+        - in: query
+          name: k
+          schema:
+            type: integer
+            default: 5
+          required: false
+          description: Number of results
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                        metadata:
+                          type: object
+                        score:
+                          type: number
+
+  /search/filter:
+    post:
+      summary: Filter-aware search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  example: EC2 pricing
+                k:
+                  type: integer
+                  default: 5
+                filters:
+                  type: object
+                  example:
+                    service: ec2
+                    last_updated: "2024-12-01"
+      responses:
+        "200":
+          description: Filtered search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                        metadata:
+                          type: object
+                        score:
+                          type: number
+
+  /ask:
+    get:
+      summary: Context-aware LLM Q&A
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          required: true
+          description: User question
+        - in: query
+          name: structured
+          schema:
+            type: boolean
+            default: false
+          required: false
+          description: Return structured CIA/AAA JSON if true
+      responses:
+        "200":
+          description: Answer from retriever + LLM
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      answer:
+                        type: string
+                  - type: object
+                    properties:
+                      Confidentiality:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            risk: { type: string }
+                            mitigation: { type: string }
+                      Integrity:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            risk: { type: string }
+                            mitigation: { type: string }
+                      Availability:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            risk: { type: string }
+                            mitigation: { type: string }

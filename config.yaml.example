@@ -1,0 +1,38 @@
+# config.yaml
+
+# confluence:
+#   base_url: "https://your-domain.atlassian.net/wiki"
+#   email: "your_email@example.com"
+#   api_token: "your_api_token"
+#   page_ids:
+#     - "123456"
+#     - "654321"
+openai:
+    api_key: "sk-proj"
+    model: "text-embedding-3-small"
+    chat_model: "gpt-4o-mini"
+
+langsmith:
+  api_key: "ls-xxx"           # your LangSmith key
+  project: "chakravyuh-rag"   # project name in LangSmith
+  endpoint: "https://api.smith.langchain.com"
+
+aws_docs:
+  base_dir: "./aws_docs"
+  max_workers: 4
+  services:
+    - name: "s3"
+      url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html"
+    - name: "ec2"
+      url: "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/concepts.html"
+
+database:
+  user: "chakravyuh"
+  password: "chakravyuh"
+  host: "db"
+  port: 5432
+  dbname: "chakravyuh"
+  collection: "documents"
+  index_type: "hnsw"   # options: hnsw, ivfflat 
+  index_params:
+    lists: 100         # used for ivfflat, ignored for hnsw
