@@ -1,7 +1,9 @@
 """CSRF protection for API endpoints."""
+import os
+import hmac
+import hashlib
+from typing import Optional
 from fastapi import Request, HTTPException
-from fastapi_csrf_protect import CsrfProtect
-from fastapi_csrf_protect.exceptions import CsrfProtectError
 from pydantic import BaseModel
 
 from chakravyuh.core.config import get_config
@@ -14,35 +16,57 @@ class CsrfSettings(BaseModel):
     cookie_secure: bool = True
     cookie_samesite: str = "strict"
     header_name: str = "X-CSRF-Token"
-    header_type: str = "X-CSRF-Token"
 
 
-# Global CSRF protector instance
-_csrf_protect: Optional[CsrfProtect] = None
+# Global CSRF settings
+_csrf_settings: Optional[CsrfSettings] = None
 
 
-def get_csrf_protect() -> Optional[CsrfProtect]:
-    """Get or create CSRF protector instance."""
-    global _csrf_protect
-    if _csrf_protect is None:
+def get_csrf_settings() -> Optional[CsrfSettings]:
+    """Get or create CSRF settings."""
+    global _csrf_settings
+    if _csrf_settings is None:
         try:
             # Use a secret from config or environment
             secret_key = os.getenv("CSRF_SECRET_KEY", "change-me-in-production")
-            
-            @CsrfProtect.load_config
-            def get_csrf_config():
-                return CsrfSettings(
-                    secret_key=secret_key,
-                    cookie_secure=True,  # Only send over HTTPS
-                    cookie_samesite="strict",
-                )
-            
-            _csrf_protect = CsrfProtect()
+            _csrf_settings = CsrfSettings(
+                secret_key=secret_key,
+                cookie_secure=True,  # Only send over HTTPS
+                cookie_samesite="strict",
+            )
         except Exception as e:
             logger.warning(f"CSRF protection initialization failed: {e}")
-            # Return None if initialization fails (will be handled gracefully)
             return None
-    return _csrf_protect
+    return _csrf_settings
+
+
+def _generate_csrf_token(secret_key: str) -> str:
+    """Generate a CSRF token."""
+    # Simple token generation using HMAC
+    import secrets
+    token = secrets.token_urlsafe(32)
+    signature = hmac.new(
+        secret_key.encode(),
+        token.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return f"{token}.{signature}"
+
+
+def _validate_csrf_token(token: str, secret_key: str) -> bool:
+    """Validate a CSRF token."""
+    try:
+        if "." not in token:
+            return False
+        token_part, signature = token.rsplit(".", 1)
+        expected_signature = hmac.new(
+            secret_key.encode(),
+            token_part.encode(),
+            hashlib.sha256
+        ).hexdigest()
+        return hmac.compare_digest(signature, expected_signature)
+    except Exception:
+        return False
 
 
 def csrf_protect(request: Request):
@@ -61,12 +85,28 @@ def csrf_protect(request: Request):
         return
     
     try:
-        csrf = get_csrf_protect()
-        if csrf:
-            csrf.validate_csrf(request)
-    except CsrfProtectError as e:
-        logger.warning(f"CSRF validation failed: {e}")
-        raise HTTPException(status_code=403, detail="CSRF token validation failed")
+        settings = get_csrf_settings()
+        if not settings:
+            # If CSRF is not configured, allow the request but log it
+            logger.debug("CSRF protection not configured, skipping validation")
+            return
+        
+        # Get CSRF token from header
+        header_name = settings.header_name
+        csrf_token = request.headers.get(header_name)
+        
+        if not csrf_token:
+            logger.warning(f"CSRF token missing in header {header_name}")
+            raise HTTPException(status_code=403, detail="CSRF token validation failed")
+        
+        # Validate the token
+        if not _validate_csrf_token(csrf_token, settings.secret_key):
+            logger.warning("CSRF token validation failed")
+            raise HTTPException(status_code=403, detail="CSRF token validation failed")
+            
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
         logger.error(f"CSRF protection error: {e}")
         # In case of errors, we'll allow the request but log it
