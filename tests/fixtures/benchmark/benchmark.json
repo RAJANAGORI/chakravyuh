@@ -1,0 +1,81 @@
+{
+  "version": "1.0",
+  "cases": [
+    {
+      "case_id": "s3_bucket_public",
+      "architecture_description": "An S3 bucket configured for public read access. The bucket contains sensitive customer data including PII. No encryption at rest is enabled. Access logging is disabled.",
+      "expected_threats": [
+        {
+          "category": "confidentiality",
+          "risk": "Unauthorized data access",
+          "impact": "High",
+          "likelihood": "High"
+        },
+        {
+          "category": "integrity",
+          "risk": "Data tampering",
+          "impact": "High",
+          "likelihood": "Medium"
+        }
+      ],
+      "expected_controls": [
+        "Enable bucket encryption",
+        "Disable public access",
+        "Enable access logging",
+        "Implement bucket policies"
+      ],
+      "expected_risks": [
+        "Data breach",
+        "Compliance violation",
+        "Data loss"
+      ],
+      "metadata": {}
+    },
+    {
+      "case_id": "ec2_no_iam_role",
+      "architecture_description": "EC2 instances running without IAM roles. Applications use hardcoded credentials stored in environment variables. No MFA required for access. SSH keys are shared across instances.",
+      "expected_threats": [
+        {
+          "category": "authentication",
+          "risk": "Credential compromise",
+          "impact": "High",
+          "likelihood": "High"
+        },
+        {
+          "category": "authorization",
+          "risk": "Privilege escalation",
+          "impact": "High",
+          "likelihood": "Medium"
+        }
+      ],
+      "expected_controls": [
+        "Use IAM roles for EC2",
+        "Implement MFA",
+        "Rotate credentials regularly",
+        "Use AWS Secrets Manager"
+      ],
+      "expected_risks": [
+        "Unauthorized access",
+        "Privilege escalation"
+      ],
+      "metadata": {}
+    },
+    {
+      "case_id": "eval_test",
+      "architecture_description": "Test",
+      "expected_threats": [
+        {
+          "risk": "Data breach",
+          "impact": "High",
+          "likelihood": "Medium"
+        }
+      ],
+      "expected_controls": [
+        "Encryption",
+        "Access control"
+      ],
+      "expected_risks": [],
+      "metadata": {}
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+# config.yaml
+
+# confluence:
+#   base_url: "https://your-domain.atlassian.net/wiki"
+#   email: "your_email@example.com"
+#   api_token: "your_api_token"
+#   page_ids:
+#     - "123456"
+#     - "654321"
+openai:
+    api_key: "sk-proj"
+    model: "text-embedding-3-small"
+    chat_model: "gpt-4o-mini"
+
+langsmith:
+  api_key: "ls-xxx"           # your LangSmith key
+  project: "chakravyuh-rag"   # project name in LangSmith
+  endpoint: "https://api.smith.langchain.com"
+
+aws_docs:
+  base_dir: "./aws_docs"
+  max_workers: 4
+  services:
+    - name: "s3"
+      url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html"
+    - name: "ec2"
+      url: "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/concepts.html"
+
+database:
+  user: "chakravyuh"
+  password: "chakravyuh"
+  host: "db"
+  port: 5432
+  dbname: "chakravyuh"
+  collection: "documents"
+  index_type: "hnsw"   # options: hnsw, ivfflat 
+  index_params:
+    lists: 100         # used for ivfflat, ignored for hnsw
+
+# Knowledge Graph Configuration (Tier 3)
+knowledge_graph:
+  enabled: true
+  cache_dir: "./data/knowledge"
+  mitre_domain: "enterprise"  # enterprise, mobile, ics
+  graph_storage: "memory"     # memory, neo4j, arango
+  # Optional Neo4j configuration
+  # neo4j_uri: "bolt://localhost:7687"
+  # neo4j_user: "neo4j"
+  # neo4j_password: "password"
+
+# Security Configuration (Tier 5)
+security:
+  adversarial_detection: true
+  access_control_enabled: true
+  access_control_auto_assign_reader: false  # Deny by default (set to true to auto-assign reader role)
+  audit_log_dir: "./logs/audit"
+  pii_detection: true
+  pii_masking: true
+
+# Environment Variables (set these in your environment or .env file):
+# ENVIRONMENT=production              # Set to "production" to enable HTTPS enforcement
+# ALLOWED_HOSTS=yourdomain.com        # Comma-separated list of allowed hosts for production
+# CSRF_SECRET_KEY=your-secret-key     # Secret key for CSRF protection (use a strong random key)
+
+# Evaluation Configuration (Tier 6)
+evaluation:
+  benchmark_dataset_path: "./data/evaluation/benchmark"
+  reviews_storage_path: "./data/evaluation/reviews"
+  enable_continuous_evaluation: false

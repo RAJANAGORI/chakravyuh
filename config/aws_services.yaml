@@ -1,0 +1,140 @@
+# AWS Services Configuration for Documentation Scraping
+# Organized by category for better management
+
+# Core Infrastructure Services (High Priority for Security)
+core_infrastructure:
+  - name: "s3"
+    url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html"
+    priority: "high"
+    security_focus: ["data-protection", "access-control", "encryption"]
+  
+  - name: "ec2"
+    url: "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/concepts.html"
+    priority: "high"
+    security_focus: ["network-security", "iam-roles", "instance-security"]
+  
+  - name: "vpc"
+    url: "https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html"
+    priority: "high"
+    security_focus: ["network-isolation", "security-groups", "nacls"]
+
+# Identity & Access Management (Critical for Security)
+iam_security:
+  - name: "iam"
+    url: "https://docs.aws.amazon.com/IAM/latest/UserGuide/introduction.html"
+    priority: "critical"
+    security_focus: ["access-control", "policies", "roles", "mfa"]
+  
+  - name: "kms"
+    url: "https://docs.aws.amazon.com/kms/latest/developerguide/overview.html"
+    priority: "high"
+    security_focus: ["encryption", "key-management", "crypto"]
+  
+  - name: "secrets-manager"
+    url: "https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html"
+    priority: "high"
+    security_focus: ["secrets-management", "rotation", "access-control"]
+
+# Compute & Containers
+compute:
+  - name: "lambda"
+    url: "https://docs.aws.amazon.com/lambda/latest/dg/welcome.html"
+    priority: "medium"
+    security_focus: ["execution-security", "vpc-config", "permissions"]
+  
+  - name: "ecs"
+    url: "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/Welcome.html"
+    priority: "medium"
+    security_focus: ["container-security", "task-roles", "networking"]
+  
+  - name: "eks"
+    url: "https://docs.aws.amazon.com/eks/latest/userguide/what-is-eks.html"
+    priority: "medium"
+    security_focus: ["kubernetes-security", "pod-security", "rbac"]
+
+# Database Services
+databases:
+  - name: "rds"
+    url: "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Welcome.html"
+    priority: "medium"
+    security_focus: ["encryption", "network-isolation", "backup-security"]
+  
+  - name: "dynamodb"
+    url: "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html"
+    priority: "medium"
+    security_focus: ["encryption", "iam-policies", "vpc-endpoints"]
+
+# Networking & Content Delivery
+networking:
+  - name: "cloudfront"
+    url: "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Introduction.html"
+    priority: "low"
+    security_focus: ["waf", "ssl-tls", "origin-security"]
+  
+  - name: "api-gateway"
+    url: "https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html"
+    priority: "medium"
+    security_focus: ["authentication", "authorization", "throttling"]
+
+# Security & Compliance Services
+security_services:
+  - name: "security-hub"
+    url: "https://docs.aws.amazon.com/securityhub/latest/userguide/what-is-securityhub.html"
+    priority: "high"
+    security_focus: ["compliance", "findings", "standards"]
+  
+  - name: "guardduty"
+    url: "https://docs.aws.amazon.com/guardduty/latest/ug/what-is-guardduty.html"
+    priority: "high"
+    security_focus: ["threat-detection", "anomaly-detection", "findings"]
+  
+  - name: "waf"
+    url: "https://docs.aws.amazon.com/waf/latest/developerguide/what-is-aws-waf.html"
+    priority: "medium"
+    security_focus: ["web-protection", "rules", "rate-limiting"]
+  
+  - name: "shield"
+    url: "https://docs.aws.amazon.com/waf/latest/developerguide/ddos-overview.html"
+    priority: "low"
+    security_focus: ["ddos-protection", "availability"]
+
+# Monitoring & Logging
+monitoring:
+  - name: "cloudwatch"
+    url: "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/WhatIsCloudWatch.html"
+    priority: "medium"
+    security_focus: ["log-analysis", "metrics", "alarms"]
+  
+  - name: "cloudtrail"
+    url: "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-user-guide.html"
+    priority: "high"
+    security_focus: ["audit-logging", "compliance", "forensics"]
+
+# Storage & Backup
+storage:
+  - name: "efs"
+    url: "https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html"
+    priority: "low"
+    security_focus: ["encryption", "access-control", "network-security"]
+  
+  - name: "backup"
+    url: "https://docs.aws.amazon.com/aws-backup/latest/devguide/whatisawsbackup.html"
+    priority: "low"
+    security_focus: ["backup-security", "encryption", "access-control"]
+
+# Application Integration
+integration:
+  - name: "sns"
+    url: "https://docs.aws.amazon.com/sns/latest/dg/welcome.html"
+    priority: "low"
+    security_focus: ["access-policies", "encryption"]
+  
+  - name: "sqs"
+    url: "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/welcome.html"
+    priority: "low"
+    security_focus: ["access-policies", "encryption", "dlq"]
+
+# Notes:
+# - priority: critical/high/medium/low - determines scraping order
+# - security_focus: key security topics to prioritize when scraping
+# - URLs point to main user/developer guides for comprehensive coverage
