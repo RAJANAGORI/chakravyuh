@@ -31,7 +31,7 @@ langchain==0.3.27
 langchain-community==0.3.29
 langchain-core==0.3.76
 langchain-openai==0.3.33
-langchain-postgres==0.0.15
+langchain-postgres==0.0.16
 langchain-text-splitters==0.3.11
 langsmith==0.4.28
 marshmallow==3.26.1
