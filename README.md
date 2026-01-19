@@ -8,6 +8,21 @@ A modular Retrieval - Augmented Generation (RAG) system for secure knowledge ret
 
 ## Purpose and Setup Guide
 
+## Recent Updates
+
+- **Updated Dependencies:** All packages updated to latest compatible versions
+  - FastAPI 0.116.2 with Starlette 0.48.0 (compatible versions)
+  - Uvicorn 0.40.0
+  - SQLAlchemy 2.0.45
+  - Pydantic 2.11.9 with Pydantic Settings 2.12.0
+  - LangChain Postgres 0.0.16
+  - BeautifulSoup4 4.14.3
+  - pytest-asyncio 1.3.0
+- **Security Improvements:** 
+  - Custom CSRF protection implementation (removed dependency on outdated `fastapi-csrf-protect`)
+  - All security features now use modern, maintained packages
+- **Dependency Resolution:** All package conflicts resolved for smooth installation
+
 ## Introduction
 
 This project aims to build a modular Retrieval - Augmented Generation (RAG) system designed for secure knowledge retrieval and threat modeling. Inspired by the concept of *Chakravyuh* from the Mahabharata - a complex battle formation symbolizing layered defenses - this system implements a layered architecture where each phase contributes to a robust and flexible pipeline.
@@ -33,9 +48,20 @@ This labyrinth/spiral image visually resonates with the Chakravyuh theme:
 
 ## 0) Prerequisites
 
-- Python 3.10+ (you’re on 3.13 ✅)
+- Python 3.10+ (you're on 3.13 ✅)
 - Docker + Docker Compose
 - OpenAI API key
+
+### Key Dependencies
+
+The project uses modern, up-to-date packages:
+- **FastAPI 0.116.2** - Modern async web framework
+- **Uvicorn 0.40.0** - ASGI server
+- **Starlette 0.48.0** - ASGI framework (compatible with FastAPI 0.116.2)
+- **SQLAlchemy 2.0.45** - Database ORM
+- **LangChain 0.3.27** - LLM framework
+- **Pydantic 2.11.9** - Data validation
+- **Custom CSRF Protection** - Built-in security (no external dependency)
 
 ---
 
@@ -51,10 +77,15 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-If fastapi / uvicorn / psycopg2-binary are missing, run:
+**Note:** All dependencies are specified in `requirements.txt`. If you encounter missing packages, ensure you've activated your virtual environment and run:
 
 ```
-pip install fastapi uvicorn psycopg2-binary
+pip install -r requirements.txt
+```
+
+For specific packages:
+```
+pip install fastapi==0.116.2 uvicorn==0.40.0 psycopg2-binary
 ```
 
 ---
@@ -213,11 +244,23 @@ Expected logs:
 
 ## 7) Phase 4/5 — Run the API (Retrieval + LLM)
 
-Start FastAPI:
+Start FastAPI (basic API):
 
 ```
 uvicorn api.search_api:app --reload --port 8000
 ```
+
+Or start the enhanced API with security features:
+
+```
+uvicorn chakravyuh.api.enhanced_api:app --reload --port 8000
+```
+
+The enhanced API includes:
+- CSRF protection
+- Rate limiting
+- Access control
+- Enhanced security middleware
 
 Open docs:
 
@@ -296,6 +339,13 @@ make insert
 make api
 ```
 
+### Security Features
+
+- **Custom CSRF Protection:** Built-in CSRF protection implemented in `chakravyuh/security/csrf.py` (no external dependencies)
+- **Rate Limiting:** Integrated with `slowapi` for API rate limiting
+- **Input Validation:** Pydantic-based validation for all API inputs
+- **Security Headers:** HTTPS redirect and trusted host middleware
+
 ### Common fixes
 
 - **OPENAI_API_KEY error:** Ensure `config.yaml` has the key; code sets env automatically.
@@ -303,6 +353,8 @@ make api
 - **Import errors when running files directly:** Prefer `python -m package.module` from repo root.
 - **Name collision with retriever:** Renamed to `rag_retriever`; keep imports updated.
 - **Deprecation warning about PGVector (community):** Safe to ignore for now; can migrate to `langchain_postgres.PGVector` later.
+- **Dependency conflicts:** All package versions in `requirements.txt` are tested for compatibility. If you encounter conflicts, ensure you're using the exact versions specified.
+- **CSRF token errors:** CSRF protection is enabled by default. For development, you can configure `CSRF_SECRET_KEY` in your environment or disable CSRF for specific endpoints.
 - Remember to add `config.yaml` to `.gitignore` to avoid committing secrets.
 
 ---
