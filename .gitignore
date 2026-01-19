@@ -25,8 +25,8 @@ MANIFEST
 venv/
 env/
 ENV/
-chakravyuh/
 .venv
+# Note: chakravyuh/ is the source code package and should NOT be ignored
 
 # IDE
 .vscode/
@@ -83,12 +83,22 @@ dmypy.json
 
 # OS
 Thumbs.db
-# Local files
+# Local files (optional - uncomment if you want to ignore local documentation)
 local_docs/
 
-# Custom
-*.pdf
-*.txt
+# Custom file types (be careful with wildcards)
+# PDF files (generated documents, but allow important ones)
+# *.pdf
+# Note: Uncomment above if you want to ignore all PDFs, but this will also ignore documentation PDFs
+
+# Text files - DO NOT ignore requirements.txt and other important .txt files
+# *.txt  # COMMENTED OUT - too broad, would ignore requirements.txt
+# Instead, ignore specific text files in data directories:
+data/**/*.txt
+aws_docs/**/*.txt
+embedded_docs/**/*.txt
+
+# Office documents (generated reports, etc.)
 *.docx
 *.doc
 *.xls
