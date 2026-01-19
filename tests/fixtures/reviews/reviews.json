@@ -1,0 +1,27 @@
+{
+  "version": "1.0",
+  "reviews": [
+    {
+      "review_id": "review_tm1_20260119_123038",
+      "threat_model_id": "tm1",
+      "reviewer_id": "expert1",
+      "status": "approved",
+      "comments": "Looks good",
+      "corrections": [],
+      "accuracy_score": 0.9,
+      "completeness_score": 0.85,
+      "timestamp": "2026-01-19 12:30:38.157277"
+    },
+    {
+      "review_id": "review_tm1_20260119_123040",
+      "threat_model_id": "tm1",
+      "reviewer_id": "expert1",
+      "status": "approved",
+      "comments": "Looks good",
+      "corrections": [],
+      "accuracy_score": 0.9,
+      "completeness_score": 0.85,
+      "timestamp": "2026-01-19 12:30:40.642205"
+    }
+  ]
+}

@@ -83,3 +83,12 @@ webencodings==0.5.1
 xlrd==2.0.2
 yarl==1.20.1
 zstandard==0.25.0
+
+# Optional: Graph database support (uncomment if using Neo4j or ArangoDB)
+# neo4j==5.15.0
+# python-arango==7.6.1
+
+# Testing dependencies
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-asyncio==0.21.1
