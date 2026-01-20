@@ -183,7 +183,7 @@ docker exec -it chakravyuh_pgvector psql -U raja -d ragdb -c \
 
 ---
 
-## 4) Phase 1 — Scrape AWS docs
+## 4) Phase 1   Scrape AWS docs
 
 ```
 python main.py
@@ -199,7 +199,7 @@ You should see `aws_docs/s3/*.json` and `aws_docs/ec2/*.json`.
 
 ---
 
-## 5) Phase 2 — Ingest + Embed (LangChain)
+## 5) Phase 2   Ingest + Embed (LangChain)
 
 ```
 python ingestion/ingestion.py
@@ -225,7 +225,7 @@ You should see:
 
 ---
 
-## 6) Phase 3 — Bulk insert into pgvector
+## 6) Phase 3   Bulk insert into pgvector
 
 Run as module from project root (so imports work):
 
@@ -242,7 +242,7 @@ Expected logs:
 
 ---
 
-## 7) Phase 4/5 — Run the API (Retrieval + LLM)
+## 7) Phase 4/5   Run the API (Retrieval + LLM)
 
 Start FastAPI (basic API):
 
