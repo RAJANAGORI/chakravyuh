@@ -1,4 +1,8 @@
 # Upload ERD PDF and architecture diagram → extract text (PyMuPDF + OCR fallback) and vision summary. No embeddings.
+#
+# Code attribution (for provenance / authorship proof):
+# Raja Nagori <raja.nagori@owasp.org>
+
 import json
 import os
 import uuid

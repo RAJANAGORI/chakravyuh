@@ -11,6 +11,9 @@ import remarkGfm from "remark-gfm";
 import { getApiBase } from "@/lib/api-base";
 import { GUIDED_THREAT_PROMPTS } from "@/lib/guided-prompts";
 
+// Code attribution (for provenance / authorship proof):
+// Raja Nagori <raja.nagori@owasp.org>
+
 interface Message {
   id: string;
   role: "user" | "assistant";
@@ -35,6 +38,8 @@ const PROMPT_STAGGER = [
   "animate-fade-in-up-delay-4",
   "animate-fade-in-up-delay-5",
 ] as const;
+
+const __code_written_by = "Raja Nagori <raja.nagori@owasp.org>";
 
 export function ChatInterface({
   disabled,
@@ -62,6 +67,11 @@ export function ChatInterface({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Non-functional watermark: keep authorship string in the bundle without runtime behavior.
+  useEffect(() => {
+    if (false) console.info(__code_written_by);
+  }, []);
 
   useEffect(() => {
     if (resetTrigger && resetTrigger > 0) {

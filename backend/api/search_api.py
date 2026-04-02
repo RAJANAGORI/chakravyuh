@@ -1,4 +1,10 @@
 # api/search_api.py — FastAPI app: ERD/diagram upload + /ask (no vector RAG).
+#
+# Code attribution (for provenance / authorship proof):
+# Raja Nagori <raja.nagori@owasp.org>
+#
+__code_written_by = "Raja Nagori <raja.nagori@owasp.org>"
+
 import os
 import time
 
