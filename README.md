@@ -116,17 +116,29 @@ Prompts for chat live in **`backend/qa/qa_chain.py`** (system text + CIA/AAA pla
 - **Multi-file analysis session** — `analysis_id` ties ERD PDFs, supporting text/PDF/JSON/TXT, and architecture diagrams.
 - **ERD text extraction** — PDF (with optional OCR settings), JSON, TXT.
 - **Diagram processing** — images/PDF; vision model produces a **stored text summary** (not re-run on every chat turn).
-- **Guided threat modeling chat** — `/ask` and structured **`/threat-modeling`** with CIA/AAA-oriented playbook in the backend.
+- **Guided threat modeling chat** — `POST /ask` (CIA/AAA-oriented playbook grounded only in your uploaded session).
 - **Health** — `GET /health` (database + LLM readiness).
-- **Metrics** — `GET /metrics` (in-process collector).
 
 ## Operations
 
 | URL | Description |
 |-----|-------------|
 | http://localhost:8000/health | Liveness and dependency checks |
-| http://localhost:8000/metrics | Basic metrics summary |
 | http://localhost:8000/docs | Swagger UI |
+
+## API Endpoints (core)
+
+Use these endpoints to build a session from uploaded artifacts and then run chat:
+
+- `POST /api/create-analysis-session` — create an empty `analysis_id`
+- `POST /api/save-original-erd` — save original ERD bytes (helper; `X-Filename` header)
+- `POST /api/process-erd` — extract ERD text and upsert into the session (`multipart/form-data`)
+- `POST /api/append-text-document` — append supporting text docs to the same session
+- `POST /api/append-architecture-diagram` — process architecture diagrams and store vision summary
+- `POST /api/process-architecture-diagram` — legacy single-diagram replace (used by the “Replace all” button)
+- `GET /api/analysis-status?analysis_id=...` — check whether the session is ready for chat
+- `GET /api/session-documents?analysis_id=...` — internal check for whether text documents exist
+- `POST /ask` — chat with uploaded session context (JSON body: `q`, `analysis_id`, `structured`, `k`)
 
 ## Docker (production-style)
 

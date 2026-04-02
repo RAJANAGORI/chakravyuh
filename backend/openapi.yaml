@@ -1,10 +1,11 @@
 openapi: 3.1.0
 info:
-  title: chakravyuh RAG API
+  title: Chakravyuh API
   version: "1.0.0"
-  description: >
-    Retrieval-Augmented Generation API with pgvector + LangChain.
-    Provides search, filtered search, and LLM-powered Q&A.
+  description: |
+    Session-based ERD + architecture diagram processing, then chat/structured
+    threat modeling. This spec documents only the endpoints used by the
+    Chakravyuh frontend.
 servers:
   - url: http://127.0.0.1:8000
 
@@ -12,149 +13,323 @@ paths:
   /health:
     get:
       summary: Health check
-      description: Returns API status
       responses:
         "200":
-          description: Healthy
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-                properties:
-                  status:
-                    type: string
-                    example: ok
 
-  /search:
-    get:
-      summary: Search top-k chunks
+  /api/create-analysis-session:
+    post:
+      summary: Create empty analysis session
+      responses:
+        "200":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/save-original-erd:
+    post:
+      summary: Save original ERD bytes (helper)
       parameters:
-        - in: query
-          name: q
+        - in: header
+          name: X-Filename
+          required: true
           schema:
             type: string
-          required: true
-          description: Search query
-        - in: query
-          name: k
-          schema:
-            type: integer
-            default: 5
-          required: false
-          description: Number of results
+          description: Original filename (used to write the file)
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
       responses:
         "200":
-          description: Search results
+          description: Saved
           content:
             application/json:
               schema:
                 type: object
-                properties:
-                  query:
-                    type: string
-                  results:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        text:
-                          type: string
-                        metadata:
-                          type: object
-                        score:
-                          type: number
 
-  /search/filter:
+  /api/process-erd:
     post:
-      summary: Filter-aware search
+      summary: Extract text from ERD and upsert into the session
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, filename]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                filename:
+                  type: string
+                analysis_id:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: Processed
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/append-text-document:
+    post:
+      summary: Append supporting text documents to the session
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, filename, analysis_id]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                filename:
+                  type: string
+                analysis_id:
+                  type: string
+                doc_role:
+                  type: string
+                  default: supporting
+      responses:
+        "200":
+          description: Appended
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/append-architecture-diagram:
+    post:
+      summary: Process architecture diagrams and store vision summary
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, filename, analysis_id]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                filename:
+                  type: string
+                analysis_id:
+                  type: string
+      responses:
+        "200":
+          description: Diagram appended
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/process-architecture-diagram:
+    post:
+      summary: Legacy single-diagram replace
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, filename, analysis_id]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                filename:
+                  type: string
+                analysis_id:
+                  type: string
+      responses:
+        "200":
+          description: Diagram analyzed
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/analysis-status:
+    get:
+      summary: Session readiness for chat
+      parameters:
+        - in: query
+          name: analysis_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /ask:
+    post:
+      summary: Context-aware chat (uses uploaded session context)
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required: [q]
               properties:
-                query:
+                q:
                   type: string
-                  example: EC2 pricing
+                  minLength: 1
+                analysis_id:
+                  type: string
+                  nullable: true
+                structured:
+                  type: boolean
+                  default: false
                 k:
                   type: integer
-                  default: 5
-                filters:
-                  type: object
-                  example:
-                    service: ec2
-                    last_updated: "2024-12-01"
+                  default: 3
       responses:
         "200":
-          description: Filtered search results
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  query:
-                    type: string
-                  results:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        text:
-                          type: string
-                        metadata:
-                          type: object
-                        score:
-                          type: number
-
-  /ask:
-    get:
-      summary: Context-aware LLM Q&A
-      parameters:
-        - in: query
-          name: q
-          schema:
-            type: string
-          required: true
-          description: User question
-        - in: query
-          name: structured
-          schema:
-            type: boolean
-            default: false
-          required: false
-          description: Return structured CIA/AAA JSON if true
-      responses:
-        "200":
-          description: Answer from retriever + LLM
+          description: Chat response (structured=false) or threat model report (structured=true)
           content:
             application/json:
               schema:
                 oneOf:
-                  - type: object
-                    properties:
-                      answer:
-                        type: string
-                  - type: object
-                    properties:
-                      Confidentiality:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            risk: { type: string }
-                            mitigation: { type: string }
-                      Integrity:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            risk: { type: string }
-                            mitigation: { type: string }
-                      Availability:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            risk: { type: string }
-                            mitigation: { type: string }
+                  - $ref: "#/components/schemas/ChatResponse"
+                  - $ref: "#/components/schemas/ThreatModelReport"
+
+components:
+  schemas:
+    ChatResponse:
+      type: object
+      required: [answer, sources]
+      properties:
+        answer:
+          type: string
+          description: Plain chat response (Markdown allowed)
+        sources:
+          type: array
+          items:
+            type: string
+          description: Filenames referenced from the uploaded session
+
+    ThreatAnalysisItem:
+      type: object
+      required:
+        [
+          boundary_name,
+          threat_title,
+          affected_asset,
+          control_name,
+          description,
+          severity,
+        ]
+      properties:
+        boundary_name:
+          type: string
+          description: Trust boundary or security perimeter
+        threat_title:
+          type: string
+          description: Specific threat name/title
+        affected_asset:
+          type: string
+          description: Which asset is impacted
+        control_name:
+          type: string
+          description: Security control or mitigation name
+        description:
+          type: string
+          description: Detailed threat description and impact
+        severity:
+          type: string
+          description: Critical/High/Medium/Low
+
+    AssetItem:
+      type: object
+      required: [asset_name, description_interface]
+      properties:
+        asset_name:
+          type: string
+          description: Process (service) or datastore name
+        description_interface:
+          type: string
+          description: Purpose, function, and interfaces
+
+    ActorItem:
+      type: object
+      required: [actor_name, description_role_auth]
+      properties:
+        actor_name:
+          type: string
+          description: User type, system, or external entity
+        description_role_auth:
+          type: string
+          description: Role description, authentication and authorization details
+
+    ThreatModelReport:
+      type: object
+      required:
+        [
+          scope_summary,
+          threat_analysis,
+          assets,
+          actors,
+          key_controls,
+          residual_risk_rating,
+          assumptions,
+          sources,
+        ]
+      properties:
+        scope_summary:
+          type: string
+          description: Summary of the threat modeling scope
+        threat_analysis:
+          type: array
+          description: Threat analysis table
+          items:
+            $ref: "#/components/schemas/ThreatAnalysisItem"
+        assets:
+          type: array
+          description: Assets table (processes and datastores)
+          items:
+            $ref: "#/components/schemas/AssetItem"
+        actors:
+          type: array
+          description: Users/Actors table
+          items:
+            $ref: "#/components/schemas/ActorItem"
+        key_controls:
+          type: array
+          description: Key security controls identified
+          items:
+            type: string
+        residual_risk_rating:
+          type: string
+          description: Overall residual risk rating
+        assumptions:
+          type: array
+          description: Key assumptions made
+          items:
+            type: string
+        sources:
+          type: array
+          description: Reference sources used
+          items:
+            type: string

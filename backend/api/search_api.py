@@ -6,9 +6,10 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel, Field
+from typing import List, Union
 
 from api.erd_processor import router as erd_router
-from qa.qa_chain import QAService
+from qa.qa_chain import QAService, ThreatModelReport
 from utils.config_loader import load_config
 
 
@@ -17,6 +18,12 @@ class AskRequest(BaseModel):
     analysis_id: str | None = Field(default=None, description="Analysis session UUID")
     structured: bool = False
     k: int = Field(default=3, ge=1, le=12)
+
+class ChatResponse(BaseModel):
+    """Plain chat response returned when `structured=false`."""
+
+    answer: str
+    sources: List[str] = Field(default_factory=list)
 
 cfg = load_config("config.yaml")
 _langsmith = cfg.get("langsmith") or {}
@@ -59,7 +66,7 @@ app.add_middleware(
 app.include_router(erd_router, prefix="/api", tags=["ERD Processing"])
 
 
-@app.get("/search")
+@app.get("/search", include_in_schema=False)
 async def search_removed():
     """Vector search removed; use /ask with uploaded ERD + diagram context."""
     raise HTTPException(
@@ -93,7 +100,7 @@ def _run_ask(
     return result
 
 
-@app.post("/ask")
+@app.post("/ask", response_model=Union[ChatResponse, ThreatModelReport])
 async def ask_post(body: AskRequest):
     try:
         return _run_ask(
@@ -110,7 +117,7 @@ async def ask_post(body: AskRequest):
         raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}") from e
 
 
-@app.get("/ask")
+@app.get("/ask", include_in_schema=False)
 async def ask(
     q: str = Query(..., description="Question"),
     k: int = 3,
@@ -127,7 +134,7 @@ async def ask(
         raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}") from e
 
 
-@app.get("/threat-modeling")
+@app.get("/threat-modeling", include_in_schema=False)
 async def threat_modeling(
     q: str = Query(..., description="Threat modeling query"),
     k: int = 2,
@@ -156,7 +163,7 @@ async def threat_modeling(
         }
 
 
-@app.get("/openapi.json")
+@app.get("/openapi.json", include_in_schema=False)
 async def openapi_endpoint():
     return get_openapi(
         title="Chakravyuh API",
@@ -165,12 +172,12 @@ async def openapi_endpoint():
     )
 
 
-@app.get("/favicon.ico")
+@app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return {}
 
 
-@app.get("/api/embedding-status")
+@app.get("/api/embedding-status", include_in_schema=False)
 async def embedding_status():
     """Embeddings removed; always ready for UI compatibility."""
     return {"ready": True, "message": "Embeddings disabled; use ERD PDF + diagram upload."}
@@ -228,7 +235,7 @@ async def health_check():
     return health_status
 
 
-@app.get("/metrics")
+@app.get("/metrics", include_in_schema=False)
 async def get_metrics():
     from utils.metrics import get_metrics
 
@@ -236,12 +243,12 @@ async def get_metrics():
     return {"status": "ok", "metrics": metrics.get_summary()}
 
 
-@app.options("/health")
+@app.options("/health", include_in_schema=False)
 async def health_check_options():
     return {"status": "ok", "message": "CORS preflight for health check"}
 
 
-@app.get("/debug")
+@app.get("/debug", include_in_schema=False)
 async def debug_endpoint(request: Request):
     return {
         "status": "ok",
@@ -252,7 +259,7 @@ async def debug_endpoint(request: Request):
     }
 
 
-@app.get("/dataset-status")
+@app.get("/dataset-status", include_in_schema=False)
 async def get_dataset_status():
     return {
         "status": "deprecated",

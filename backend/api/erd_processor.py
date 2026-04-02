@@ -152,7 +152,7 @@ async def api_create_analysis_session():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.options("/append-text-document")
+@router.options("/append-text-document", include_in_schema=False)
 async def append_text_document_options():
     return {"status": "ok"}
 
@@ -202,7 +202,7 @@ async def append_text_document(
     )
 
 
-@router.options("/append-architecture-diagram")
+@router.options("/append-architecture-diagram", include_in_schema=False)
 async def append_arch_diagram_options():
     return {"status": "ok"}
 
@@ -258,7 +258,7 @@ async def append_architecture_diagram(
     )
 
 
-@router.get("/session-documents")
+@router.get("/session-documents", include_in_schema=False)
 async def session_documents(analysis_id: str = Query(..., description="Analysis session UUID")):
     try:
         uuid.UUID(analysis_id.strip())
@@ -276,7 +276,7 @@ async def session_documents(analysis_id: str = Query(..., description="Analysis 
     )
 
 
-@router.options("/save-original-erd")
+@router.options("/save-original-erd", include_in_schema=False)
 async def save_original_erd_options():
     return {"status": "ok"}
 
@@ -300,7 +300,7 @@ async def save_original_erd(request: Request):
     )
 
 
-@router.options("/process-erd")
+@router.options("/process-erd", include_in_schema=False)
 async def process_erd_options():
     return {"status": "ok"}
 
@@ -330,7 +330,7 @@ async def process_erd(
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}") from e
 
 
-@router.options("/process-architecture-diagram")
+@router.options("/process-architecture-diagram", include_in_schema=False)
 async def process_diagram_options():
     return {"status": "ok"}
 
@@ -385,7 +385,7 @@ async def process_architecture_diagram(
     )
 
 
-@router.get("/erd-status")
+@router.get("/erd-status", include_in_schema=False)
 async def get_erd_status():
     try:
         docs = get_erd_documents()
@@ -474,12 +474,12 @@ async def analysis_status(
         )
 
 
-@router.options("/bulk-insert-erd")
+@router.options("/bulk-insert-erd", include_in_schema=False)
 async def bulk_insert_erd_options():
     return {"status": "ok"}
 
 
-@router.post("/bulk-insert-erd")
+@router.post("/bulk-insert-erd", include_in_schema=False)
 async def bulk_insert_erd():
     return JSONResponse(
         content={
@@ -489,12 +489,12 @@ async def bulk_insert_erd():
     )
 
 
-@router.options("/bulk-insert-erd-status")
+@router.options("/bulk-insert-erd-status", include_in_schema=False)
 async def bulk_insert_status_options():
     return {"status": "ok"}
 
 
-@router.get("/bulk-insert-erd-status")
+@router.get("/bulk-insert-erd-status", include_in_schema=False)
 async def get_bulk_insert_status():
     try:
         ctx = get_latest_analysis_context()

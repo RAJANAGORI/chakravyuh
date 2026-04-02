@@ -230,14 +230,15 @@ Test endpoints:
 # health
 curl 'http://127.0.0.1:8000/health'
 
-# retrieve chunks
-curl 'http://127.0.0.1:8000/search?q=what%20is%20amazon%20s3&k=5'
-
-# LLM answer (plain)
-curl 'http://127.0.0.1:8000/ask?q=What%20is%20Amazon%20S3%20and%20how%20is%20it%20secured?'
-
-# LLM structured CIA/AAA
-curl 'http://127.0.0.1:8000/ask?q=Perform%20a%20CIA%2FAAA%20threat%20model%20for%20our%20S3%20data%20path%20and%20EC2%20access%20patterns.%20Limit%20to%20top%205%20items%20in%20each%20category.&structured=true'
+# LLM answer (uses uploaded session context; call /api/* upload endpoints first)
+curl -X POST 'http://127.0.0.1:8000/ask' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "q": "What is Amazon S3 and how is it secured?",
+    "analysis_id": "YOUR_ANALYSIS_ID",
+    "structured": false,
+    "k": 3
+  }'
 ```
 
 ---
@@ -245,19 +246,22 @@ curl 'http://127.0.0.1:8000/ask?q=Perform%20a%20CIA%2FAAA%20threat%20model%20for
 ## Quick “A → B → C → D → E” Flow
 
 ```
-# A: Collect
+# A: Start backend
 uvicorn api.search_api:app --reload --port 8000
 
-# B: Chunk + Embed
-python ingestion/ingestion.py
-# (optional ERD)
-python ingestion/erd_ingestion.py
+# B: Create session + upload ERD
+#   - POST /api/create-analysis-session
+#   - POST /api/save-original-erd (helper; header X-Filename)
+#   - POST /api/process-erd (multipart: file + filename + analysis_id)
 
-# C: Store
-python -m vectorstores.pgvector_store
+# C: Append text context (optional but recommended)
+#   - POST /api/append-text-document (multipart: file + filename + analysis_id + doc_role)
 
-# D + E: Retrieve + Reason
-uvicorn api.search_api:app --reload --port 8000
+# D: Append architecture diagrams
+#   - POST /api/append-architecture-diagram (multipart: file + filename + analysis_id)
+
+# E: Ask chat (CIA/AAA)
+#   - POST /ask with JSON payload (structured=false)
 ```
 
 ---
