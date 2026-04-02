@@ -1,0 +1,19 @@
+# PostgreSQL for analysis_sessions + doc_hashes (no pgvector required).
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: chakravyuh_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: chakravyuh
+      POSTGRES_PASSWORD: chakravyuh
+      POSTGRES_DB: chakravyuh
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

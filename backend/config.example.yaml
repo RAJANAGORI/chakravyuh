@@ -1,0 +1,71 @@
+# Sample configuration — copy to config.yaml and fill in values.
+#   cp config.example.yaml config.yaml
+# Do not commit config.yaml if it contains secrets.
+#
+# PostgreSQL connections use PG_* environment variables (see .env.example).
+# The `database:` block below is legacy metadata only; get_conn() does not read it.
+
+# Chat/LLM provider — Q&A and architecture diagram vision summary
+provider: "azure_openai"   # options: "openai", "azure_openai"
+
+# Local OCR fallback for image-only PDFs (requires tesseract + poppler on the host)
+ocr:
+  min_chars_before_ocr: 50
+  dpi: 200
+  max_pages: 30
+  diagram_pdf_dpi: 200
+
+# Resize large diagram images before sending to the vision API
+vision:
+  max_image_side_px: 1600
+  # Required by some gateways: "low" (default) or "high"
+  image_detail: low
+
+# confluence:
+#   base_url: "https://your-domain.atlassian.net/wiki"
+#   email: "your_email@example.com"
+#   api_token: "your_api_token"
+#   page_ids:
+#     - "123456"
+
+azure_openai:
+  endpoint: "https://your-resource.openai.azure.com"
+  chat_deployment: "gpt-4o"
+  api_version: "2024-10-01-preview"
+  # embedding_deployment: "text-embedding-ada-002"
+
+ollama:
+  model: "embeddinggemma"
+  base_url: "http://localhost:11434"
+
+# Prefer environment variables (do not commit secrets):
+#   TM_API_CLIENT_ID, TM_API_CLIENT_SECRET, TM_TOKEN_URL, TM_API_APP_KEY, TM_API_USER_ID
+#   OPENAI_API_KEY (when using OpenAI provider)
+api_credentials:
+  client_id: "your-oauth-client-id"
+  client_secret: "your-oauth-client-secret"
+  app_key: "your-app-key"
+  user_id: "your-user-or-service-id"
+  token_url: "https://your-idp.example.com/oauth2/default/v1/token"
+
+openai:
+  api_key: ""   # or set OPENAI_API_KEY
+  chat_model: "gpt-4o-mini"
+  embedding_model: "text-embedding-3-large"
+
+langsmith:
+  api_key: ""
+  project: ""
+  endpoint: "https://api.smith.langchain.com"
+
+# Not used by db_utils.get_conn() — connection is via PG_* in .env
+database:
+  user: "chakravyuh"
+  password: "change-me"
+  host: "localhost"
+  port: 5432
+  dbname: "chakravyuh"
+  collection: "documents"
+  index_type: "hnsw"
+  index_params:
+    lists: 100

@@ -1,0 +1,109 @@
+services:
+  db:
+    image: ankane/pgvector:latest
+    container_name: chakravyuh_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER:-postgres}\" -d \"$${POSTGRES_DB:-postgres}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - chakravyuh_net
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker-prod/backend.Dockerfile
+    container_name: chakravyuh_backend
+    restart: unless-stopped
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PG_HOST: db
+      PG_PORT: "5432"
+      PG_DB: ${POSTGRES_DB}
+      PG_USER: ${POSTGRES_USER}
+      PG_PASSWORD: ${POSTGRES_PASSWORD}
+      OLLAMA_BASE_URL: "http://ollama:11434"
+    volumes:
+      - ${CONFIG_PATH}:/app/config.yaml:ro
+      - ./data/knowledge:/app/knowledge
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    healthcheck:
+      test:
+        ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+    networks:
+      - chakravyuh_net
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker-prod/frontend.Dockerfile
+    container_name: chakravyuh_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_BACKEND_API_URL: "http://localhost:8000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    networks:
+      - chakravyuh_net
+
+  # Embedding model is pulled automatically on first start (used by backend via OLLAMA_BASE_URL)
+  ollama:
+    build:
+      context: .
+      dockerfile: ollama.Dockerfile
+    image: chakravyuh-ollama:latest
+    container_name: chakravyuh_ollama
+    restart: unless-stopped
+    environment:
+      OLLAMA_EMBEDDING_MODEL: "embeddinggemma"
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    networks:
+      - chakravyuh_net
+
+networks:
+  chakravyuh_net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  ollama:

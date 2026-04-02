@@ -1,0 +1,57 @@
+# config-docker.yaml - Docker production configuration
+provider: "azure_openai"
+
+azure_openai:
+  # Populate via environment/secrets manager at deploy time.
+  endpoint: "https://your-resource.openai.azure.com"
+  chat_deployment: "your-chat-deployment"
+  api_version: "your-api-version"
+
+ocr:
+  min_chars_before_ocr: 50
+  dpi: 200
+  max_pages: 30
+  diagram_pdf_dpi: 200
+
+vision:
+  max_image_side_px: 1600
+
+# ==============================================================================
+# API CREDENTIALS
+# ==============================================================================
+api_credentials:
+  client_id: "your-oauth-client-id"
+  client_secret: "your-oauth-client-secret"
+  app_key: "your-app-key"
+  user_id: "your-user-or-service-id"
+  token_url: "https://your-idp.example.com/oauth2/default/v1/token"
+
+# ==============================================================================
+# OPENAI (Optional)
+# ==============================================================================
+openai:
+  api_key: ""
+  chat_model: "gpt-4o-mini"
+  embedding_model: "text-embedding-3-large"
+
+# ==============================================================================
+# LANGSMITH (Optional)
+# ==============================================================================
+langsmith:
+  api_key: ""
+  project: ""
+  endpoint: "https://api.smith.langchain.com"
+
+# ==============================================================================
+# DATABASE (Docker service name)
+# ==============================================================================
+database:
+  user: "chakravyuh"
+  password: "chakravyuh"
+  host: "db"  # Docker service name, not localhost!
+  port: 5432
+  dbname: "chakravyuh"
+  collection: "documents"
+  index_type: "hnsw"
+  index_params:
+    lists: 100

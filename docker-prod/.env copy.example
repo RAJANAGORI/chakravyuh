@@ -1,0 +1,7 @@
+POSTGRES_USER=chakravyuh
+POSTGRES_PASSWORD=chakravyuh
+POSTGRES_DB=ragdb
+POSTGRES_PORT=5434
+
+# Absolute path to your local config.yaml
+CONFIG_PATH=./config.yaml

@@ -1,0 +1,152 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Chakravyuh: deep indigo authority + teal signal */
+    --background: 210 45% 97%;
+    --foreground: 230 35% 14%;
+    --card: 0 0% 100%;
+    --card-foreground: 230 35% 14%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 230 35% 14%;
+    --primary: 243 75% 52%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 230 30% 94%;
+    --secondary-foreground: 230 35% 14%;
+    --muted: 230 24% 96%;
+    --muted-foreground: 225 14% 40%;
+    --accent: 172 55% 94%;
+    --accent-foreground: 230 35% 14%;
+    --destructive: 0 72% 52%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 230 22% 88%;
+    --input: 230 22% 88%;
+    --ring: 243 75% 52%;
+    --brand-teal: 172 66% 38%;
+    --radius: 0.9rem;
+  }
+ 
+  .dark {
+    --background: 220 13% 10%;
+    --foreground: 210 40% 98%;
+    --card: 220 13% 15%;
+    --card-foreground: 210 40% 98%;
+    --popover: 220 13% 10%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 120 60% 35%; /* forest green */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 220 13% 20%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 220 13% 20%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 120 60% 25%; /* forest green accent */
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 220 13% 25%;
+    --input: 220 13% 25%;
+    --ring: 120 60% 35%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(ellipse 120% 80% at 0% -10%, hsl(243 75% 52% / 0.09) 0%, transparent 45%),
+      radial-gradient(ellipse 100% 60% at 100% 0%, hsl(172 66% 45% / 0.08) 0%, transparent 42%),
+      radial-gradient(circle at 50% 100%, hsl(230 40% 96%) 0%, transparent 55%);
+    background-attachment: fixed;
+  }
+
+  body::before {
+    content: '';
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Manrope', 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    background: linear-gradient(
+      160deg,
+      hsl(var(--card) / 0.92) 0%,
+      hsl(var(--card) / 0.82) 100%
+    );
+    backdrop-filter: blur(14px);
+    border: 1px solid hsl(var(--border) / 0.8);
+    box-shadow:
+      0 10px 30px -18px hsl(220 60% 40% / 0.35),
+      0 3px 14px -10px hsl(220 60% 35% / 0.3);
+  }
+
+  .hero-gradient-text {
+    background: linear-gradient(
+      100deg,
+      hsl(243 75% 48%) 0%,
+      hsl(262 70% 52%) 45%,
+      hsl(172 66% 36%) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .shimmer-bg {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(0 0% 100% / 0.45),
+      transparent
+    );
+    animation: shimmer-slide 1.4s ease-in-out infinite;
+  }
+
+  @keyframes shimmer-slide {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .fade-in-up {
+    animation: fade-in-up 0.5s ease-out forwards;
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
