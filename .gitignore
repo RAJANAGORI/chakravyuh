@@ -240,3 +240,4 @@ frontend/.turbo
 # Root level
 node_modules/
 .DS_Store
+.security_scan_tools
