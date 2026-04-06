@@ -1,4 +1,4 @@
-import { ShieldCheck } from 'lucide-react';
+import Image from 'next/image';
 
 export function Header() {
   return (
@@ -6,8 +6,15 @@ export function Header() {
       <div className="w-full max-w-none box-border px-4 sm:px-5 md:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/15 to-violet-500/15 text-primary ring-1 ring-primary/30">
-              <ShieldCheck className="h-6 w-6" />
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-blue-500/15 to-violet-500/15 ring-1 ring-primary/30">
+              <Image
+                src="/assets/image.png"
+                alt="Chakravyuh"
+                width={24}
+                height={24}
+                className="h-6 w-6 object-contain"
+                priority
+              />
             </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
               Chakravyuh
