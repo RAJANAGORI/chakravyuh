@@ -24,6 +24,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getApiBase } from "@/lib/api-base";
+import { getApiAuthHeaders } from "@/lib/api-auth";
 
 export type UploadSlotStatus = "idle" | "processing" | "completed" | "error";
 
@@ -68,7 +69,8 @@ export function ERDUpload({
       }
       try {
         const r = await fetch(
-          `${base}/api/analysis-status?analysis_id=${encodeURIComponent(aid)}`
+          `${base}/api/analysis-status?analysis_id=${encodeURIComponent(aid)}`,
+          { headers: { ...getApiAuthHeaders() } }
         );
         const j = await r.json();
         onSessionReady(!!j.ready_for_chat);
@@ -226,7 +228,10 @@ export function ERDUpload({
   const createEmptySession = async () => {
     setIsBusy(true);
     try {
-      const r = await fetch(`${base}/api/create-analysis-session`, { method: "POST" });
+      const r = await fetch(`${base}/api/create-analysis-session`, {
+        method: "POST",
+        headers: { ...getApiAuthHeaders() },
+      });
       if (!r.ok) throw new Error(await r.text());
       const j = await r.json();
       const aid = j.analysis_id as string;
@@ -254,7 +259,10 @@ export function ERDUpload({
       const saveRes = await fetch(`${base}/api/save-original-erd`, {
         method: "POST",
         body: primaryErdFile,
-        headers: { "X-Filename": primaryErdFile.name },
+        headers: {
+          "X-Filename": primaryErdFile.name,
+          ...getApiAuthHeaders(),
+        },
         mode: "cors",
         credentials: "include",
       });
@@ -276,6 +284,7 @@ export function ERDUpload({
         response = await fetch(`${base}/api/process-erd`, {
           method: "POST",
           body: formData,
+          headers: { ...getApiAuthHeaders() },
           mode: "cors",
           credentials: "include",
           signal: controller.signal,
@@ -322,7 +331,8 @@ export function ERDUpload({
 
   const sessionHasTextDocs = async (aid: string): Promise<boolean> => {
     const r = await fetch(
-      `${base}/api/session-documents?analysis_id=${encodeURIComponent(aid)}`
+      `${base}/api/session-documents?analysis_id=${encodeURIComponent(aid)}`,
+      { headers: { ...getApiAuthHeaders() } }
     );
     if (!r.ok) return false;
     const j = await r.json();
@@ -361,6 +371,7 @@ export function ERDUpload({
         const response = await fetch(`${base}/api/append-text-document`, {
           method: "POST",
           body: formData,
+          headers: { ...getApiAuthHeaders() },
           mode: "cors",
           credentials: "include",
           signal: controller.signal,
@@ -428,6 +439,7 @@ export function ERDUpload({
         const response = await fetch(`${base}/api/append-architecture-diagram`, {
           method: "POST",
           body: formData,
+          headers: { ...getApiAuthHeaders() },
           mode: "cors",
           credentials: "include",
           signal: controller.signal,
@@ -488,6 +500,7 @@ export function ERDUpload({
       const response = await fetch(`${base}/api/process-architecture-diagram`, {
         method: "POST",
         body: formData,
+        headers: { ...getApiAuthHeaders() },
         mode: "cors",
         credentials: "include",
         signal: controller.signal,

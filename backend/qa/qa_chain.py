@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from langchain_core.documents import Document
 from pydantic import BaseModel, Field
 
+from utils.auth import is_production_mode
 from utils.config_loader import load_config
 from utils.db_utils import get_analysis_context_by_id_or_latest
 from utils.llm_provider import get_llm
@@ -97,9 +98,11 @@ def _bundle_cache_key(analysis_id: Optional[str]) -> str:
     return (analysis_id or "").strip() or "__latest__"
 
 
-def _get_cached_bundle(analysis_id: Optional[str]) -> Dict[str, Any]:
+def _get_cached_bundle(
+    analysis_id: Optional[str], owner_subject: Optional[str], allow_latest_fallback: bool
+) -> Dict[str, Any]:
     global _analysis_cache
-    key = _bundle_cache_key(analysis_id)
+    key = f"{owner_subject or 'anon'}::{_bundle_cache_key(analysis_id)}::{allow_latest_fallback}"
     now = time.time()
     if (
         _analysis_cache.get("key") == key
@@ -109,7 +112,9 @@ def _get_cached_bundle(analysis_id: Optional[str]) -> Dict[str, Any]:
         return _analysis_cache["data"]
 
     data = get_analysis_context_by_id_or_latest(
-        analysis_id if analysis_id and analysis_id.strip() else None
+        analysis_id if analysis_id and analysis_id.strip() else None,
+        owner_subject=owner_subject,
+        allow_latest_fallback=allow_latest_fallback,
     )
     _analysis_cache["data"] = data
     _analysis_cache["key"] = key
@@ -246,8 +251,12 @@ class QAService:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         analysis_id: Optional[str] = None,
+        owner_subject: Optional[str] = None,
     ):
-        bundle = _get_cached_bundle(analysis_id)
+        allow_latest_fallback = not is_production_mode()
+        bundle = _get_cached_bundle(
+            analysis_id, owner_subject=owner_subject, allow_latest_fallback=allow_latest_fallback
+        )
         docs = _context_documents_from_bundle(bundle)
 
         if service or start_date or end_date:

@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getApiBase } from "@/lib/api-base";
+import { getApiAuthHeaders } from "@/lib/api-auth";
 import { GUIDED_THREAT_PROMPTS } from "@/lib/guided-prompts";
 
 // Code attribution (for provenance / authorship proof):
@@ -70,7 +71,7 @@ export function ChatInterface({
 
   // Non-functional watermark: keep authorship string in the bundle without runtime behavior.
   useEffect(() => {
-    if (false) console.info(__code_written_by);
+    void __code_written_by;
   }, []);
 
   useEffect(() => {
@@ -109,7 +110,10 @@ export function ChatInterface({
       } else {
         const response = await fetch(`${getApiBase()}/ask`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...getApiAuthHeaders(),
+          },
           body: JSON.stringify({
             q: trimmed,
             analysis_id: analysisId || undefined,

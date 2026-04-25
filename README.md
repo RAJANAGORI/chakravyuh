@@ -106,8 +106,9 @@ npm run dev --workspace=frontend
 | Artifact | Purpose |
 |----------|---------|
 | `backend/config.example.yaml` | Template; copy to **`config.yaml`** (gitignored if you add secrets) |
-| `backend/.env` | **`PG_*`** for PostgreSQL; optional overrides |
-| Env vars | **`TM_API_CLIENT_ID`**, **`TM_API_CLIENT_SECRET`**, **`TM_TOKEN_URL`**, **`TM_API_APP_KEY`**, **`TM_API_USER_ID`** (Azure/gateway), **`OPENAI_API_KEY`** (OpenAI provider) |
+| `backend/.env` | **`PG_*`** for PostgreSQL plus runtime security controls |
+| `frontend/.env.local` (optional) | **`NEXT_PUBLIC_BACKEND_API_URL`**, **`NEXT_PUBLIC_API_BEARER_TOKEN`** (JWT string when `AUTH_ENABLED=true` on the API—visible in the browser; use dev tokens or a real login flow in production) |
+| Env vars | **`TM_API_CLIENT_ID`**, **`TM_API_CLIENT_SECRET`**, **`TM_TOKEN_URL`**, **`TM_API_APP_KEY`**, **`TM_API_USER_ID`** (Azure/gateway), **`OPENAI_API_KEY`** (OpenAI provider), **`AUTH_ENABLED`**, **`JWT_SECRET`**/**`JWT_PUBLIC_KEY`**, **`SECURITY_PRODUCTION_MODE`**, **`MAX_REQUEST_BYTES`** |
 
 Prompts for chat live in **`backend/qa/qa_chain.py`** (system text + CIA/AAA playbook). Diagram vision system text is in **`backend/services/diagram_vision.py`**.
 
@@ -140,6 +141,8 @@ Use these endpoints to build a session from uploaded artifacts and then run chat
 - `GET /api/session-documents?analysis_id=...` — internal check for whether text documents exist
 - `POST /ask` — chat with uploaded session context (JSON body: `q`, `analysis_id`, `structured`, `k`)
 
+All upload and chat endpoints require a Bearer token when `AUTH_ENABLED=true`.
+
 ## Docker (production-style)
 
 See **`docker-prod/README.md`** and **`setup-prod.sh`**. Backend mounts **`config.yaml`** and persists uploads under **`docker-prod/data/knowledge`**.
@@ -155,11 +158,14 @@ make api
 
 # Frontend — typecheck
 npm run typecheck --workspace=frontend
+
+# CI-quality checks (lint + typecheck + build)
+npm run ci
 ```
 
 ## Security
 
-See **[backend/SECURITY.md](backend/SECURITY.md)** for guidelines. Do not commit real **`config.yaml`** credentials; use **`config.example.yaml`** as the template.
+See **[backend/SECURITY.md](backend/SECURITY.md)** for guidelines. Do not commit real **`config.yaml`** credentials; use **`config.example.yaml`** as the template. In production, set `SECURITY_PRODUCTION_MODE=true` and configure strict CORS via `CORS_ALLOW_ORIGINS`.
 
 ## License
 

@@ -20,6 +20,16 @@ def load_config(path: str = "config.yaml") -> Dict[Any, Any]:
     Performance improvement: ~50-100ms saved per call after first load.
     """
     abs_path = os.path.abspath(path)
+    if not os.path.exists(abs_path):
+        candidates = [
+            os.path.join(os.path.dirname(abs_path), "config.example.yaml"),
+            os.path.join(os.path.dirname(__file__), "..", "config.example.yaml"),
+        ]
+        for candidate in candidates:
+            candidate_abs = os.path.abspath(candidate)
+            if os.path.exists(candidate_abs):
+                abs_path = candidate_abs
+                break
     
     # Check if file was modified since last cache
     try:

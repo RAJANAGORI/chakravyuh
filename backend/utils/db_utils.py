@@ -54,6 +54,7 @@ def _ensure_analysis_sessions_table(conn):
         """
         CREATE TABLE IF NOT EXISTS analysis_sessions (
             id UUID PRIMARY KEY,
+            owner_subject TEXT NOT NULL DEFAULT '',
             erd_filename TEXT,
             erd_file_path TEXT,
             erd_text TEXT NOT NULL DEFAULT '',
@@ -63,6 +64,12 @@ def _ensure_analysis_sessions_table(conn):
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
+        """
+    )
+    cur.execute(
+        """
+        ALTER TABLE analysis_sessions
+        ADD COLUMN IF NOT EXISTS owner_subject TEXT NOT NULL DEFAULT ''
         """
     )
     conn.commit()
@@ -150,6 +157,7 @@ def refresh_session_aggregates_conn(conn, session_id: str) -> None:
 
 def append_analysis_document(
     session_id: str,
+    owner_subject: str,
     kind: str,
     filename: str,
     content_text: str,
@@ -170,11 +178,15 @@ def append_analysis_document(
         _ensure_analysis_documents_table(conn)
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT 1 FROM analysis_sessions WHERE id = %s",
+                "SELECT owner_subject FROM analysis_sessions WHERE id = %s",
                 (sid,),
             )
-            if not cur.fetchone():
+            row = cur.fetchone()
+            if not row:
                 raise ValueError("analysis_id not found")
+            existing_owner = (row[0] or "").strip()
+            if existing_owner and existing_owner != owner_subject:
+                raise PermissionError("analysis_id does not belong to the caller")
             cur.execute(
                 """
                 SELECT COALESCE(MAX(sort_order), -1) + 1
@@ -327,7 +339,7 @@ def list_documents_for_analysis(analysis_id: str) -> List[Dict[str, Any]]:
             return [dict(r) for r in cur.fetchall()]
 
 
-def get_analysis_context_bundle(analysis_id: str) -> Dict[str, Any]:
+def get_analysis_context_bundle(analysis_id: str, owner_subject: Optional[str] = None) -> Dict[str, Any]:
     """All chunks for Q&A: prefer analysis_documents; else legacy session columns."""
     try:
         parsed = uuid.UUID(analysis_id.strip())
@@ -349,7 +361,7 @@ def get_analysis_context_bundle(analysis_id: str) -> Dict[str, Any]:
             cur.execute(
                 """
                 SELECT id, erd_filename, erd_file_path, erd_text,
-                       diagram_filename, diagram_file_path, architecture_diagram_summary,
+                       owner_subject, diagram_filename, diagram_file_path, architecture_diagram_summary,
                        updated_at
                 FROM analysis_sessions
                 WHERE id = %s
@@ -367,6 +379,10 @@ def get_analysis_context_bundle(analysis_id: str) -> Dict[str, Any]:
                     "diagram_filename": None,
                     "updated_at": None,
                 }
+            if owner_subject:
+                row_owner = (row.get("owner_subject") or "").strip()
+                if row_owner and row_owner != owner_subject:
+                    raise PermissionError("analysis_id does not belong to the caller")
             session = dict(row)
             cur.execute(
                 """
@@ -416,7 +432,7 @@ def get_analysis_context_bundle(analysis_id: str) -> Dict[str, Any]:
     }
 
 
-def create_analysis_session() -> str:
+def create_analysis_session(owner_subject: str) -> str:
     """Empty session for multi-file append flow (no legacy process-erd required first)."""
     new_id = uuid.uuid4()
     nid = str(new_id)
@@ -426,30 +442,47 @@ def create_analysis_session() -> str:
             cur.execute(
                 """
                 INSERT INTO analysis_sessions (
-                    id, erd_text, architecture_diagram_summary, updated_at
+                    id, owner_subject, erd_text, architecture_diagram_summary, updated_at
                 )
-                VALUES (%s, '', '', NOW())
+                VALUES (%s, %s, '', '', NOW())
                 """,
-                (nid,),
+                (nid, owner_subject),
             )
         conn.commit()
     return nid
 
 
-def get_analysis_context_by_id_or_latest(analysis_id: Optional[str]) -> Dict[str, Any]:
+def get_analysis_context_by_id_or_latest(
+    analysis_id: Optional[str],
+    owner_subject: Optional[str] = None,
+    allow_latest_fallback: bool = False,
+) -> Dict[str, Any]:
     if analysis_id and analysis_id.strip():
-        bundle = get_analysis_context_bundle(analysis_id.strip())
+        bundle = get_analysis_context_bundle(analysis_id.strip(), owner_subject=owner_subject)
         if bundle.get("analysis_id"):
             return bundle
+    if not allow_latest_fallback:
+        return {
+            "analysis_id": None,
+            "documents": [],
+            "erd_text": "",
+            "architecture_diagram_summary": "",
+            "erd_filename": None,
+            "diagram_filename": None,
+            "updated_at": None,
+        }
     with get_conn() as conn:
         _ensure_analysis_sessions_table(conn)
         with conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute(
                 """
                 SELECT id::text FROM analysis_sessions
+                WHERE (%s = '' OR owner_subject = %s)
                 ORDER BY updated_at DESC NULLS LAST
                 LIMIT 1
                 """
+                ,
+                (owner_subject or "", owner_subject or ""),
             )
             r = cur.fetchone()
             if not r:
@@ -462,11 +495,12 @@ def get_analysis_context_by_id_or_latest(analysis_id: Optional[str]) -> Dict[str
                     "diagram_filename": None,
                     "updated_at": None,
                 }
-            return get_analysis_context_bundle(r["id"])
+            return get_analysis_context_bundle(r["id"], owner_subject=owner_subject)
 
 
 def upsert_analysis_erd(
     analysis_id: Optional[str],
+    owner_subject: str,
     filename: str,
     file_path: str,
     erd_text: str,
@@ -491,34 +525,38 @@ def upsert_analysis_erd(
                 cur.execute(
                     """
                     INSERT INTO analysis_sessions (
-                        id, erd_filename, erd_file_path, erd_text, updated_at
+                        id, owner_subject, erd_filename, erd_file_path, erd_text, updated_at
                     )
-                    VALUES (%s, %s, %s, %s, NOW())
+                    VALUES (%s, %s, %s, %s, %s, NOW())
                     """,
-                    (nid, safe_filename, safe_file_path, safe_erd_text),
+                    (nid, owner_subject, safe_filename, safe_file_path, safe_erd_text),
                 )
             conn.commit()
             replace_session_text_documents(nid, safe_filename, safe_erd_text)
             return nid
 
         with conn.cursor() as cur:
+            cur.execute("SELECT owner_subject FROM analysis_sessions WHERE id=%s", (str(parsed),))
+            existing = cur.fetchone()
+            if existing and (existing[0] or "").strip() not in {"", owner_subject}:
+                raise PermissionError("analysis_id does not belong to the caller")
             cur.execute(
                 """
                 UPDATE analysis_sessions
-                SET erd_filename=%s, erd_file_path=%s, erd_text=%s, updated_at=NOW()
+                SET owner_subject=%s, erd_filename=%s, erd_file_path=%s, erd_text=%s, updated_at=NOW()
                 WHERE id=%s
                 """,
-                (safe_filename, safe_file_path, safe_erd_text, str(parsed)),
+                (owner_subject, safe_filename, safe_file_path, safe_erd_text, str(parsed)),
             )
             if cur.rowcount == 0:
                 cur.execute(
                     """
                     INSERT INTO analysis_sessions (
-                        id, erd_filename, erd_file_path, erd_text, updated_at
+                        id, owner_subject, erd_filename, erd_file_path, erd_text, updated_at
                     )
-                    VALUES (%s, %s, %s, %s, NOW())
+                    VALUES (%s, %s, %s, %s, %s, NOW())
                     """,
-                    (str(parsed), safe_filename, safe_file_path, safe_erd_text),
+                    (str(parsed), owner_subject, safe_filename, safe_file_path, safe_erd_text),
                 )
         conn.commit()
         replace_session_text_documents(str(parsed), safe_filename, safe_erd_text)
@@ -527,6 +565,7 @@ def upsert_analysis_erd(
 
 def update_analysis_diagram(
     analysis_id: str,
+    owner_subject: str,
     diagram_filename: str,
     diagram_file_path: str,
     architecture_diagram_summary: str,
@@ -540,9 +579,13 @@ def update_analysis_diagram(
     with get_conn() as conn:
         _ensure_analysis_sessions_table(conn)
         with conn.cursor() as cur:
-            cur.execute("SELECT 1 FROM analysis_sessions WHERE id = %s", (sid,))
-            if not cur.fetchone():
+            cur.execute("SELECT owner_subject FROM analysis_sessions WHERE id = %s", (sid,))
+            row = cur.fetchone()
+            if not row:
                 raise ValueError("analysis_id not found; upload and process ERD PDF first")
+            existing_owner = (row[0] or "").strip()
+            if existing_owner and existing_owner != owner_subject:
+                raise PermissionError("analysis_id does not belong to the caller")
     replace_session_diagram_documents(
         sid, diagram_filename, diagram_file_path, architecture_diagram_summary
     )
@@ -556,7 +599,7 @@ def get_latest_analysis_context() -> Dict[str, Any]:
             cur.execute(
                 """
                 SELECT id, erd_filename, erd_file_path, erd_text,
-                       diagram_filename, diagram_file_path, architecture_diagram_summary,
+                       owner_subject, diagram_filename, diagram_file_path, architecture_diagram_summary,
                        updated_at
                 FROM analysis_sessions
                 ORDER BY updated_at DESC NULLS LAST
@@ -584,7 +627,7 @@ def get_latest_analysis_context() -> Dict[str, Any]:
             }
 
 
-def list_analysis_sessions(limit: int = 20) -> List[Dict[str, Any]]:
+def list_analysis_sessions(limit: int = 20, owner_subject: Optional[str] = None) -> List[Dict[str, Any]]:
     with get_conn() as conn:
         _ensure_analysis_sessions_table(conn)
         with conn.cursor(cursor_factory=DictCursor) as cur:
@@ -594,10 +637,11 @@ def list_analysis_sessions(limit: int = 20) -> List[Dict[str, Any]]:
                        LENGTH(erd_text) AS erd_text_len,
                        LENGTH(architecture_diagram_summary) AS diagram_summary_len
                 FROM analysis_sessions
+                WHERE (%s = '' OR owner_subject = %s)
                 ORDER BY updated_at DESC
                 LIMIT %s
                 """,
-                (limit,),
+                (owner_subject or "", owner_subject or "", limit),
             )
             rows = cur.fetchall()
             out = []

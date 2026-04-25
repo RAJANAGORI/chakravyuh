@@ -42,6 +42,9 @@ threat-model/
 | `erd_processor` | Multipart uploads, `knowledge/erd` & `knowledge/diagrams`, calls `erd_extraction` / `diagram_vision`, `db_utils` append/upsert, `clear_analysis_cache` after writes |
 | `qa_chain` | `QAService.answer`: load bundle by `analysis_id`, build LangChain `Document` list, token-truncate context, invoke LLM (plain or `ThreatModelReport` JSON) |
 | `db_utils` | `get_conn()`, ensure tables, `analysis_sessions`, `analysis_documents`, `get_analysis_context_bundle`, `append_analysis_document`, etc. |
+| `auth` | JWT bearer validation, production-mode toggles, request identity helpers |
+| `rate_limit` | In-process per-subject request throttling for upload/chat routes |
+| `audit` | Structured security/operations audit event logging |
 | `llm_provider` | `get_llm`, `get_embeddings` (embeddings unused by current Q&A path) |
 | `diagram_vision` | `summarize_diagram_image`, `rasterize_pdf_first_page`; `vision.image_detail` (`low`/`high`) |
 
@@ -51,7 +54,7 @@ threat-model/
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET/POST | `/ask` | Primary Q&A; `analysis_id` scopes context |
+| GET/POST | `/ask` | Primary Q&A; `analysis_id` scopes context; JWT required when auth enabled |
 | GET | `/threat-modeling` | Same pipeline with `structured=True` (JSON schema) |
 
 **Uploads & session (prefix `/api`)**
@@ -75,6 +78,7 @@ threat-model/
 **`analysis_sessions`**
 
 - `id` (UUID PK)
+- `owner_subject` (JWT `sub` claim for access isolation)
 - `erd_filename`, `erd_file_path`, `erd_text`
 - `diagram_filename`, `diagram_file_path`, `architecture_diagram_summary`
 - `created_at`, `updated_at`
@@ -122,6 +126,7 @@ sequenceDiagram
 ## 4. Configuration
 
 - **`backend/config.yaml`** (or mounted path in Docker): `provider`, `azure_openai` / `openai`, `vision`, `ocr`, `api_credentials` placeholders; secrets overridden by **`TM_*`** / **`OPENAI_API_KEY`** env vars as implemented in `llm_provider.py`.
+- **`backend/.env`**: `PG_*` DB connection plus security/runtime controls (`AUTH_ENABLED`, `JWT_SECRET`/`JWT_PUBLIC_KEY`, `SECURITY_PRODUCTION_MODE`, `MAX_REQUEST_BYTES`, `CORS_ALLOW_ORIGINS`).
 
 ## 5. Related documents
 

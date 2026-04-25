@@ -8,7 +8,7 @@ __code_written_by = "Raja Nagori <raja.nagori@owasp.org>"
 import os
 import time
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel, Field
@@ -16,7 +16,10 @@ from typing import List, Union
 
 from api.erd_processor import router as erd_router
 from qa.qa_chain import QAService, ThreatModelReport
+from utils.audit import audit_event
+from utils.auth import AuthContext, is_production_mode, require_auth
 from utils.config_loader import load_config
+from utils.rate_limit import enforce_rate_limit
 
 
 class AskRequest(BaseModel):
@@ -47,22 +50,29 @@ app = FastAPI(
     title="Chakravyuh API",
     redirect_slashes=False,
 )
+MAX_REQUEST_BYTES = int(os.getenv("MAX_REQUEST_BYTES", str(55 * 1024 * 1024)))
+ENABLE_DEPRECATED_ENDPOINTS = (
+    (os.getenv("ENABLE_DEPRECATED_ENDPOINTS") or "").strip().lower() in {"1", "true", "yes"}
+    or not is_production_mode()
+)
 
 _cors_env = os.getenv("CORS_ALLOW_ORIGINS", "")
 _cors_allow_origins = [o.strip() for o in _cors_env.split(",") if o.strip()]
-if not _cors_allow_origins:
+if not _cors_allow_origins and not is_production_mode():
     _cors_allow_origins = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
     ]
+_allow_origin_regex = None
+if not is_production_mode():
+    _allow_origin_regex = r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+):3000$"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_allow_origins,
-    # LAN/dev convenience for browser access from private network hosts.
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+):3000$",
+    allow_origin_regex=_allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -72,9 +82,23 @@ app.add_middleware(
 app.include_router(erd_router, prefix="/api", tags=["ERD Processing"])
 
 
+@app.middleware("http")
+async def request_size_guard(request: Request, call_next):
+    length_header = request.headers.get("content-length")
+    if length_header:
+        try:
+            if int(length_header) > MAX_REQUEST_BYTES:
+                raise HTTPException(status_code=413, detail="Request body too large.")
+        except ValueError:
+            pass
+    return await call_next(request)
+
+
 @app.get("/search", include_in_schema=False)
 async def search_removed():
     """Vector search removed; use /ask with uploaded ERD + diagram context."""
+    if not ENABLE_DEPRECATED_ENDPOINTS:
+        raise HTTPException(status_code=404, detail="Not found")
     raise HTTPException(
         status_code=410,
         detail="Semantic search has been removed. Use chat (/ask) with uploaded documents.",
@@ -89,6 +113,7 @@ def _run_ask(
     start_date: str | None,
     end_date: str | None,
     analysis_id: str | None,
+    owner_subject: str,
 ):
     start_time = time.time()
     qa_service = QAService(k=min(k, 6))
@@ -100,6 +125,7 @@ def _run_ask(
         start_date=start_date,
         end_date=end_date,
         analysis_id=analysis_id,
+        owner_subject=owner_subject,
     )
     elapsed = time.time() - start_time
     print(f"Query completed in {elapsed:.2f} seconds")
@@ -107,9 +133,12 @@ def _run_ask(
 
 
 @app.post("/ask", response_model=Union[ChatResponse, ThreatModelReport])
-async def ask_post(body: AskRequest):
+async def ask_post(body: AskRequest, request: Request, auth: AuthContext = Depends(require_auth)):
     try:
-        return _run_ask(
+        enforce_rate_limit(f"{auth.subject}:ask", max_requests=60, window_seconds=60)
+        if is_production_mode() and not (body.analysis_id or "").strip():
+            raise HTTPException(status_code=400, detail="analysis_id is required in production mode.")
+        result = _run_ask(
             body.q,
             body.k,
             body.structured,
@@ -117,14 +146,25 @@ async def ask_post(body: AskRequest):
             None,
             None,
             body.analysis_id,
+            auth.subject,
         )
+        audit_event(
+            request, "ask_completed", auth.subject, analysis_id=body.analysis_id or "", structured=body.structured
+        )
+        return result
     except Exception as e:
         print(f"Error in ask POST: {str(e)}")
+        if isinstance(e, PermissionError):
+            raise HTTPException(status_code=403, detail=str(e)) from e
+        if isinstance(e, HTTPException):
+            raise
+        audit_event(request, "ask_failed", auth.subject, error=str(e))
         raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}") from e
 
 
 @app.get("/ask", include_in_schema=False)
 async def ask(
+    request: Request,
     q: str = Query(..., description="Question"),
     k: int = 3,
     structured: bool = False,
@@ -132,31 +172,49 @@ async def ask(
     start_date: str | None = None,
     end_date: str | None = None,
     analysis_id: str | None = Query(default=None, description="Analysis session UUID"),
+    auth: AuthContext = Depends(require_auth),
 ):
     try:
-        return _run_ask(q, k, structured, service, start_date, end_date, analysis_id)
+        enforce_rate_limit(f"{auth.subject}:ask-get", max_requests=30, window_seconds=60)
+        if is_production_mode() and not (analysis_id or "").strip():
+            raise HTTPException(status_code=400, detail="analysis_id is required in production mode.")
+        result = _run_ask(q, k, structured, service, start_date, end_date, analysis_id, auth.subject)
+        audit_event(
+            request, "ask_completed", auth.subject, analysis_id=analysis_id or "", structured=structured
+        )
+        return result
     except Exception as e:
         print(f"Error in ask endpoint: {str(e)}")
+        if isinstance(e, PermissionError):
+            raise HTTPException(status_code=403, detail=str(e)) from e
+        if isinstance(e, HTTPException):
+            raise
+        audit_event(request, "ask_failed", auth.subject, error=str(e))
         raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}") from e
 
 
 @app.get("/threat-modeling", include_in_schema=False)
 async def threat_modeling(
+    request: Request,
     q: str = Query(..., description="Threat modeling query"),
     k: int = 2,
     analysis_id: str | None = Query(default=None, description="Analysis session UUID"),
+    auth: AuthContext = Depends(require_auth),
 ):
     try:
         start_time = time.time()
         qa = QAService(k=min(k, 4))
         result = qa.answer(
-            q, k=min(k, 4), structured=True, analysis_id=analysis_id
+            q, k=min(k, 4), structured=True, analysis_id=analysis_id, owner_subject=auth.subject
         )
         elapsed = time.time() - start_time
         print(f"Threat modeling completed in {elapsed:.2f} seconds")
+        audit_event(request, "threat_modeling_completed", auth.subject, analysis_id=analysis_id or "")
         return result
     except Exception as e:
         print(f"Error in threat modeling: {str(e)}")
+        if isinstance(e, PermissionError):
+            raise HTTPException(status_code=403, detail=str(e)) from e
         return {
             "scope_summary": f"Error processing request: {str(e)}",
             "threat_analysis": [],
@@ -184,7 +242,7 @@ async def favicon():
 
 
 @app.get("/api/embedding-status", include_in_schema=False)
-async def embedding_status():
+async def embedding_status(auth: AuthContext = Depends(require_auth)):
     """Embeddings removed; always ready for UI compatibility."""
     return {"ready": True, "message": "Embeddings disabled; use ERD PDF + diagram upload."}
 
@@ -242,7 +300,7 @@ async def health_check():
 
 
 @app.get("/metrics", include_in_schema=False)
-async def get_metrics():
+async def get_metrics(auth: AuthContext = Depends(require_auth)):
     from utils.metrics import get_metrics
 
     metrics = get_metrics()
@@ -255,7 +313,7 @@ async def health_check_options():
 
 
 @app.get("/debug", include_in_schema=False)
-async def debug_endpoint(request: Request):
+async def debug_endpoint(request: Request, auth: AuthContext = Depends(require_auth)):
     return {
         "status": "ok",
         "headers": dict(request.headers),
@@ -266,7 +324,9 @@ async def debug_endpoint(request: Request):
 
 
 @app.get("/dataset-status", include_in_schema=False)
-async def get_dataset_status():
+async def get_dataset_status(auth: AuthContext = Depends(require_auth)):
+    if not ENABLE_DEPRECATED_ENDPOINTS:
+        raise HTTPException(status_code=404, detail="Not found")
     return {
         "status": "deprecated",
         "message": "Vector dataset status removed. Use GET /api/analysis-status.",

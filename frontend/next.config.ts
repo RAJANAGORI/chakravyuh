@@ -7,12 +7,6 @@ const nextConfig: NextConfig = {
     'http://127.0.0.1:3000',
     'http://192.168.1.3:3000',
   ],
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   images: {
     remotePatterns: [
       {

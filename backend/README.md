@@ -2,7 +2,9 @@
   <img src="./assets/image.png" alt="chakravyuh Logo" width="250"/>
 </p>
 
-# chakravyuh RAG
+# chakravyuh backend
+
+> Current implementation note: the backend now uses session-scoped uploads (ERD/supporting docs/diagrams) and chat over stored context. Legacy vector search paths are deprecated.
 
 A modular Retrieval - Augmented Generation (RAG) system for secure knowledge retrieval and threat modeling.
 
@@ -95,6 +97,16 @@ database:
   index_type: "hnsw"     # or "ivfflat"
   index_params:
     lists: 100           # only for ivfflat
+```
+
+Set runtime auth and production flags in `backend/.env`:
+
+```bash
+AUTH_ENABLED=true
+JWT_SECRET=replace-with-a-strong-secret
+SECURITY_PRODUCTION_MODE=true
+CORS_ALLOW_ORIGINS=https://your-frontend.example.com
+MAX_REQUEST_BYTES=57671680
 ```
 
 ---
@@ -232,6 +244,7 @@ curl 'http://127.0.0.1:8000/health'
 
 # LLM answer (uses uploaded session context; call /api/* upload endpoints first)
 curl -X POST 'http://127.0.0.1:8000/ask' \
+  -H 'Authorization: Bearer YOUR_JWT' \
   -H 'Content-Type: application/json' \
   -d '{
     "q": "What is Amazon S3 and how is it secured?",
