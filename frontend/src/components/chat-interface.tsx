@@ -190,9 +190,9 @@ export function ChatInterface({
         </div>
       )}
       <div className="flex h-full flex-col">
-      <div className="flex-shrink-0 space-y-3 border-b border-border/70 bg-gradient-to-r from-indigo-50/90 via-violet-50/70 to-teal-50/50 p-4">
+      <div className="flex-shrink-0 space-y-3 border-b border-border/70 bg-gradient-to-r from-indigo-50/90 via-violet-50/70 to-teal-50/50 p-4 dark:from-indigo-950/55 dark:via-violet-950/45 dark:to-teal-950/35">
         <h3 className="flex items-center gap-2 font-semibold text-foreground">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 text-primary shadow-sm ring-1 ring-border/60">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 text-primary shadow-sm ring-1 ring-border/60 dark:bg-card/90 dark:ring-border/80">
             <Bot className="h-5 w-5" />
           </span>
           Security Analysis Chat (CIA AAA)
@@ -204,7 +204,7 @@ export function ChatInterface({
               type="button"
               variant="secondary"
               size="sm"
-              className={`h-8 rounded-full border-border/80 bg-white/90 text-xs shadow-sm transition-transform hover:-translate-y-px hover:shadow ${
+              className={`h-8 rounded-full border-border/80 bg-white/90 text-xs font-medium text-foreground shadow-sm transition-transform hover:-translate-y-px hover:shadow dark:bg-card/95 dark:text-foreground dark:hover:bg-card ${
                 PROMPT_STAGGER[Math.min(i, PROMPT_STAGGER.length - 1)]
               }`}
               disabled={disabled || isLoading}
@@ -214,7 +214,7 @@ export function ChatInterface({
             </Button>
           ))}
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-border/80 bg-card/90 px-3 py-2 text-xs text-muted-foreground shadow-sm">
+        <div className="flex items-center gap-2 rounded-xl border border-border/80 bg-card/90 px-3 py-2 text-xs text-muted-foreground shadow-sm dark:bg-card/80">
           <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
           Guided prompts insert into the composer; answers use your uploaded session only.
         </div>
@@ -260,7 +260,7 @@ export function ChatInterface({
               <div
                 className={`max-w-[90%] rounded-2xl px-6 py-4 shadow-sm ${
                   message.role === "user"
-                    ? "ml-8 border border-indigo-200 bg-indigo-100 text-foreground"
+                    ? "ml-8 border border-indigo-200 bg-indigo-100 text-foreground dark:border-primary/35 dark:bg-primary/20 dark:text-foreground"
                     : "bg-muted/70 mr-8 border border-border/70"
                 }`}
               >

@@ -1,0 +1,124 @@
+================================================================================
+FIXTURE: MedFlow Telehealth — data model (source text for 01_erd_medflow.pdf)
+Canonical upload for the UI primary ERD slot: use the PDF (run generate_erd_pdf.py
+to rebuild). You may still append this .txt via the text queue for diffing.
+Session test IDs: analysis uses extracted text for table/column threat anchoring.
+================================================================================
+
+--- Mermaid ERD (source of truth for relationships) ---
+
+erDiagram
+  PATIENT ||--o{ CONSENT_RECORD : "signs"
+  PATIENT ||--o{ APPOINTMENT : "books"
+  PROVIDER ||--o{ APPOINTMENT : "conducts"
+  APPOINTMENT ||--o{ CLINICAL_NOTE : "has_notes"
+  CLINICAL_NOTE ||--o{ NOTE_ATTACHMENT : "may_include"
+  PATIENT ||--o{ PAYMENT_METHOD : "vault_token_ref"
+  BILLING_ACCOUNT ||--o{ INVOICE : "issued_to"
+  INVOICE ||--o{ PAYMENT_INTENT : "collects_via"
+  PROVIDER }o--|| IDENTITY_LINK : "maps_to_idp_subject"
+  AUDIT_LOG }o--|| PATIENT : "may_reference_phi"
+  AUDIT_LOG }o--|| PROVIDER : "may_reference"
+
+  PATIENT {
+    uuid id PK
+    string email UK "PII"
+    string full_name "PII"
+    string phone_e164 "PII"
+    date dob "PHI"
+    string mrn UK "PHI medical record"
+    timestamptz created_at
+  }
+
+  CONSENT_RECORD {
+    uuid id PK
+    uuid patient_id FK
+    string consent_type "hipaa_telehealth|marketing"
+    boolean granted
+    string ip_address "PII"
+    timestamptz recorded_at
+  }
+
+  PROVIDER {
+    uuid id PK
+    string npi UK "PHI identifier"
+    string display_name
+    string specialty
+    timestamptz created_at
+  }
+
+  APPOINTMENT {
+    uuid id PK
+    uuid patient_id FK
+    uuid provider_id FK
+    timestamptz scheduled_start
+    string status "scheduled|completed|cancelled"
+    string video_room_id "join token surface"
+  }
+
+  CLINICAL_NOTE {
+    uuid id PK
+    uuid appointment_id FK
+    text note_body "PHI free text"
+    uuid author_provider_id FK
+    timestamptz signed_at
+  }
+
+  NOTE_ATTACHMENT {
+    uuid id PK
+    uuid note_id FK
+    string s3_object_key "encrypted blob ref"
+    string content_type
+  }
+
+  PAYMENT_METHOD {
+    uuid id PK
+    uuid patient_id FK
+    string stripe_payment_method_id "tokenized, no PAN"
+    string card_last4
+    string brand
+  }
+
+  BILLING_ACCOUNT {
+    uuid id PK
+    uuid patient_id FK
+    string stripe_customer_id
+  }
+
+  INVOICE {
+    uuid id PK
+    uuid billing_account_id FK
+    money amount_cents
+    string currency
+    string status "open|paid|void"
+  }
+
+  PAYMENT_INTENT {
+    uuid id PK
+    uuid invoice_id FK
+    string stripe_payment_intent_id
+    string status
+  }
+
+  IDENTITY_LINK {
+    uuid id PK
+    uuid provider_id FK
+    string oidc_sub UK "IdP subject"
+    string tenant_id
+  }
+
+  AUDIT_LOG {
+    bigserial id PK
+    uuid actor_subject "opaque user id"
+    string action "read_note|download_attachment|refund"
+    jsonb resource_ref "typed pointer"
+    timestamptz ts
+    string source_ip
+  }
+
+--- Narrative (trust & sensitivity) ---
+
+- PHI rests in PATIENT, CLINICAL_NOTE, NOTE_ATTACHMENT metadata, PROVIDER.npi, and AUDIT_LOG when it references patient context.
+- Payment card data never stored raw; PAYMENT_METHOD keeps Stripe tokens only (PCI scope reduction).
+- Video sessions use third-party vendor; video_room_id is opaque in APPOINTMENT — real-time media leaves this trust zone.
+- External systems: Stripe (billing), OIDC IdP (workforce identity), object storage (attachments), LLM vendor (optional summarization — not persisted in this schema).

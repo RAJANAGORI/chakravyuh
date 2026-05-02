@@ -1,0 +1,81 @@
+================================================================================
+FIXTURE: MedFlow runtime architecture (upload as second text → supporting_text)
+Complements 01_erd_medflow.txt; use with architecture PNG for vision summary.
+================================================================================
+
+--- Mermaid C4-style context (logical) ---
+
+flowchart TB
+  subgraph internet["Public Internet"]
+    U[Patient Browser]
+    A[Admin Browser]
+  end
+
+  subgraph dmz["DMZ / Edge"]
+    CF[Cloudflare CDN + WAF]
+  end
+
+  subgraph app_tier["App Tier — AWS account acct-medflow-prod"]
+    FE[Next.js 16 BFF — Vercel]
+    API[FastAPI — ECS Fargate]
+    WORK[Async workers — SQS consumers]
+  end
+
+  subgraph data_tier["Data Tier"]
+    PG[(PostgreSQL RDS — PHI)]
+    REDIS[(Redis ElastiCache — sessions rate-limit)]
+    S3[(S3 — note attachments SSE-KMS)]
+  end
+
+  subgraph third["Third parties"]
+    STRIPE[Stripe API — PCI]
+    IDP[Okta OIDC — workforce]
+    LLM[OpenAI API — summarization]
+    VIDEO[Twilio Video — consult rooms]
+  end
+
+  U --> CF --> FE
+  A --> CF
+  FE -->|HTTPS JSON + HttpOnly cookie| API
+  API --> PG
+  API --> REDIS
+  API --> S3
+  API --> STRIPE
+  API --> IDP
+  API --> LLM
+  WORK --> PG
+  WORK --> S3
+  FE --> VIDEO
+  API --> VIDEO
+
+--- Mermaid sequence — sensitive read path ---
+
+sequenceDiagram
+  participant B as Browser
+  participant FE as Next BFF
+  participant API as FastAPI
+  participant PG as PostgreSQL
+  participant S3 as Object store
+
+  B->>FE: GET /visit/123/summary
+  FE->>API: GET /api/visits/123 (Bearer session)
+  API->>API: JWT validate + ABAC check patient_id
+  API->>PG: SELECT clinical_note …
+  PG-->>API: note rows
+  API->>S3: presign GET attachment
+  API-->>FE: JSON + short-lived URLs
+  FE-->>B: HTML/JSON
+
+--- Trust boundaries (for threat modeling) ---
+
+1. Boundary: Browser ↔ CDN — untrusted client, XSS/CSRF surface on FE.
+2. Boundary: FE ↔ API — service JWT, CORS allowlist app.medflow.com.
+3. Boundary: API ↔ PostgreSQL — TLS, IAM auth, PHI at rest KMS.
+4. Boundary: API ↔ Stripe — card data never touches MedFlow disks (tokenization only).
+5. Boundary: API ↔ OpenAI — clinical note snippets may leave PHI zone if summarization enabled; feature-flagged per tenant.
+6. Boundary: API ↔ Twilio — signaling/metadata in MedFlow; media encrypted E2E per vendor claim (validate contract).
+
+--- Known deployment facts ---
+
+- Region: us-east-1 primary; no cross-region replication for PHI bucket yet (DR gap).
+- Auth: patients use magic-link (email); providers use Okta MFA.

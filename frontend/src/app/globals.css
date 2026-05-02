@@ -66,6 +66,13 @@
     background-attachment: fixed;
   }
 
+  .dark body {
+    background-image:
+      radial-gradient(ellipse 120% 80% at 0% -10%, hsl(243 75% 52% / 0.18) 0%, transparent 48%),
+      radial-gradient(ellipse 100% 55% at 100% 0%, hsl(172 66% 42% / 0.12) 0%, transparent 45%),
+      radial-gradient(circle at 50% 100%, hsl(220 20% 18%) 0%, transparent 55%);
+  }
+
   body::before {
     content: '';
     pointer-events: none;
@@ -95,12 +102,30 @@
       0 3px 14px -10px hsl(220 60% 35% / 0.3);
   }
 
+  .dark .glass-panel {
+    box-shadow:
+      0 12px 36px -16px hsl(0 0% 0% / 0.45),
+      0 4px 16px -12px hsl(0 0% 0% / 0.35);
+  }
+
   .hero-gradient-text {
     background: linear-gradient(
       100deg,
       hsl(243 75% 48%) 0%,
       hsl(262 70% 52%) 45%,
       hsl(172 66% 36%) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .dark .hero-gradient-text {
+    background: linear-gradient(
+      100deg,
+      hsl(243 75% 62%) 0%,
+      hsl(262 70% 58%) 45%,
+      hsl(172 55% 52%) 100%
     );
     -webkit-background-clip: text;
     background-clip: text;

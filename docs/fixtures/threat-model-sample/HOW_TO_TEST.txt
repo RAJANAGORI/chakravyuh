@@ -1,0 +1,34 @@
+How to exercise Chakravyuh with these fixtures
+==============================================
+
+1. In the UI: click "New empty session" if you use the text queue; or start from
+   step 2a only.
+
+2a. Primary ERD (recommended — matches product expectation):
+   - Drop 01_erd_medflow.pdf on "Primary ERD" → Process primary ERD.
+   - This runs PDF text extraction like a real analyst upload.
+
+2b. Alternative — text queue only (no primary PDF):
+   - Add 01_erd_medflow.txt first → Process text queue (first file → erd_text).
+   - Skip 2a if you do this.
+
+3. Supporting architecture text (optional but useful):
+   - Add 02_architecture_mermaid.txt to the text queue → Process (supporting_text).
+
+4. Diagram queue:
+   - Add architecture_diagram.png → Process diagram queue (vision summary).
+
+5. When "ready for chat" is true, try prompts such as:
+   - "List CIA/AAA risks for PAYMENT_METHOD and Stripe integration."
+   - "What trust boundaries does the LLM integration cross?"
+   - "Threat model exfiltration paths for CLINICAL_NOTE and S3 attachments."
+
+6. Rebuild the PDF after editing the .txt:  python3 generate_erd_pdf.py
+   (from this folder; requires PyMuPDF / backend venv).
+
+Files in this folder:
+  01_erd_medflow.pdf   ← primary ERD for the UI
+  01_erd_medflow.txt   ← source + optional text-queue upload
+  generate_erd_pdf.py
+  02_architecture_mermaid.txt
+  architecture_diagram.png

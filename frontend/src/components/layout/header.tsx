@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export function Header() {
   return (
@@ -20,9 +21,12 @@ export function Header() {
               Chakravyuh
             </h1>
           </div>
-          <div className="hidden items-center gap-2 rounded-full border border-border/80 bg-card/80 px-3 py-1.5 text-xs text-muted-foreground md:flex">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            AI Security Workspace
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <div className="hidden items-center gap-2 rounded-full border border-border/80 bg-card/80 px-3 py-1.5 text-xs text-muted-foreground md:flex">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              AI Security Workspace
+            </div>
           </div>
         </div>
       </div>
