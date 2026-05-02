@@ -28,10 +28,10 @@ jobs:
       - name: Frontend lint
         run: npm run lint --workspace=frontend
 
-      # Hoisted installs omit frontend/node_modules/.bin/tsc — run the workspace TypeScript
-      # from the repo root with an explicit project file (fixes TS2307 @/ aliases on CI).
+      # Root `tsc -p frontend/tsconfig.json` still breaks `@/*` on some runners; use a root
+      # config that sets baseUrl to repo root and maps `@/*` → frontend/src (see tsconfig.typecheck.json).
       - name: Frontend typecheck
-        run: npx tsc --noEmit -p frontend/tsconfig.json
+        run: npx tsc --noEmit -p tsconfig.typecheck.json
 
       - name: Frontend build
         run: npm run build --workspace=frontend

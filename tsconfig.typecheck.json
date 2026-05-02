@@ -1,0 +1,17 @@
+{
+  "extends": "./frontend/tsconfig.json",
+  "compilerOptions": {
+    "plugins": [],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./frontend/src/*"]
+    }
+  },
+  "include": [
+    "frontend/next-env.d.ts",
+    "frontend/**/*.ts",
+    "frontend/**/*.tsx",
+    "frontend/.next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", "backend"]
+}
