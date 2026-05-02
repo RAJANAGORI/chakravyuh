@@ -1,0 +1,15 @@
+---
+description: Resolve conflicts between chat, rules, and safety
+alwaysApply: true
+---
+
+# Instruction precedence
+
+When instructions conflict, apply this order:
+
+1. Unambiguous **direct user** request in the current message (overrides defaults).
+2. **Safety**: never expose secrets; never run destructive git/data operations without explicit user confirmation in chat (hooks may also prompt).
+3. **`AGENTS.md`** and other **`.cursor/rules/*.mdc`** for this repo.
+4. General coding best practices.
+
+If two sources still conflict, **ask the user** which wins—do not silently pick one.

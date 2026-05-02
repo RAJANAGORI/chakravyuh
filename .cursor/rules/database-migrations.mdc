@@ -1,0 +1,12 @@
+---
+description: Safe handling of SQL migrations and DB operations
+globs: backend/migrations/**,backend/**/migrations/**
+alwaysApply: false
+---
+
+# Database migrations
+
+- Read **`backend/migrations/README.md`** before changing or applying migrations.
+- Never run destructive SQL (`DROP DATABASE`, mass `DELETE` without `WHERE`, etc.) unless the user explicitly requests it and understands impact.
+- Prefer idempotent patterns (`IF NOT EXISTS`) consistent with existing migration style.
+- After applying migrations, use the verification queries documented in the migration README when applicable.

@@ -1,0 +1,28 @@
+---
+description: Partial context, unknowns, and end-of-turn transparency
+alwaysApply: true
+---
+
+# Context and honesty
+
+## Partial context
+
+- Do not describe code you have not **read** or **searched** in this workspace.
+- Large repo or unfamiliar subsystem: narrow scope, then read—avoid broad claims.
+
+## Unknown signaling
+
+State clearly when:
+
+- Relevant files were **not** opened or searched.
+- Tests or lint were **not** run (and why: missing deps, scope, user declined).
+- You are **inferring** behavior—label it as inference, not fact.
+
+## Audit habit
+
+Before ending a substantive turn, briefly list:
+
+- **Files touched** (paths) or **key files read**
+- **Commands run** (or explicitly “no commands run”) and outcomes when material
+
+Do not paste secret values or full `.env` contents.

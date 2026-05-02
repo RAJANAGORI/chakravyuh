@@ -1,6 +1,9 @@
 # qa/qa_chain.py — Q&A from stored ERD text + architecture diagram analysis only (no RAG/embeddings).
+from __future__ import annotations
+
+import re
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from langchain_core.documents import Document
 from pydantic import BaseModel, Field
@@ -49,6 +52,77 @@ When producing a full review, structure output in this order and use markdown ta
 Always cite which uploaded file or diagram each claim comes from when possible (use filenames from context headers).
 """
 
+_STRUCTURED_GROUNDING_RULES = """
+STRUCTURED OUTPUT — ANTI-HALLUCINATION / ERD SCOPE (mandatory for JSON)
+- You only know this system from the numbered context blocks above. There is no other retrieval.
+- threat_analysis: include ONLY risks that are plausibly tied to elements named or described in those blocks.
+- Every threat_analysis item MUST set erd_reference to a short phrase or identifier **copied verbatim** from the context (table/entity/API field/diagram label/sentence fragment). If you cannot find such a substring, **omit that threat** entirely.
+- Do not populate threats from generic industry checklists unless the upload text explicitly supports them for **this** design (e.g. named external integration, auth boundary, or datastore).
+- Prefer fewer, well-anchored findings over many speculative ones.
+- If the user asks for breadth beyond what the uploads support, explain the gap in scope_summary and keep threat_analysis small or empty rather than inventing components.
+"""
+
+
+def _norm_ctx_blob(s: str) -> str:
+    return " ".join(s.lower().split())
+
+
+def _threat_row_anchors_context(
+    erd_reference: str,
+    affected_asset: str,
+    boundary_name: str,
+    threat_title: str,
+    context_blob: str,
+) -> bool:
+    """Heuristic: require a verbatim-ish anchor in session text to reduce generic false positives."""
+    ctx = _norm_ctx_blob(context_blob)
+    if not ctx:
+        return False
+    for chunk in (erd_reference, affected_asset, boundary_name):
+        c = _norm_ctx_blob((chunk or "").strip())
+        if len(c) >= 8 and c in ctx:
+            return True
+    blob = f"{erd_reference} {affected_asset} {boundary_name} {threat_title}"
+    tokens = re.findall(r"[A-Za-z0-9_]{4,}", blob)
+    hits = 0
+    seen: set[str] = set()
+    for t in tokens:
+        tl = t.lower()
+        if tl in seen or len(tl) < 4:
+            continue
+        seen.add(tl)
+        if tl in ctx:
+            hits += 1
+            if hits >= 2:
+                return True
+    return False
+
+
+def _enforce_erd_grounding_on_report(report: ThreatModelReport, context_blob: str) -> ThreatModelReport:
+    """Drop threat rows that cannot be tied to substrings of the uploaded context."""
+    if not (context_blob or "").strip():
+        return report
+    kept: List[ThreatAnalysisItem] = []
+    discarded: List[str] = list(report.discarded_ungrounded)
+    for row in report.threat_analysis:
+        ok = _threat_row_anchors_context(
+            row.erd_reference,
+            row.affected_asset,
+            row.boundary_name,
+            row.threat_title,
+            context_blob,
+        )
+        if ok:
+            kept.append(row)
+        else:
+            ref_preview = (row.erd_reference or "")[:120]
+            discarded.append(
+                f"Not anchored in session uploads (no matching ERD/doc fragment): {row.threat_title!r}; erd_reference={ref_preview!r}"
+            )
+    report.threat_analysis = kept
+    report.discarded_ungrounded = discarded
+    return report
+
 
 def clear_analysis_cache() -> None:
     _analysis_cache["data"] = None
@@ -63,6 +137,14 @@ class ThreatAnalysisItem(BaseModel):
     control_name: str = Field(description="Security control or mitigation name")
     description: str = Field(description="Detailed threat description and impact")
     severity: str = Field(description="Critical/High/Medium/Low")
+    erd_reference: str = Field(
+        default="",
+        description="Verbatim or near-verbatim phrase from the uploaded ERD/diagram/supporting text this row is about (required for inclusion).",
+    )
+    grounding_basis: Literal["document_anchored", "diagram_anchored", "inferred_from_context"] = Field(
+        default="document_anchored",
+        description="document_anchored=ERD/supporting text; diagram_anchored=architecture diagram summary; inferred_from_context=logical extension still requiring erd_reference substring from uploads.",
+    )
 
 
 class AssetItem(BaseModel):
@@ -84,6 +166,10 @@ class ThreatModelReport(BaseModel):
     residual_risk_rating: str = Field(description="Overall residual risk rating")
     assumptions: List[str] = Field(default_factory=list, description="Key assumptions made")
     sources: List[str] = Field(default_factory=list, description="Reference sources used")
+    discarded_ungrounded: List[str] = Field(
+        default_factory=list,
+        description="Threat candidates removed because they could not be tied to text present in the session uploads (reduces hallucinated/generic findings).",
+    )
 
 
 def _truncate_to_tokens(text: str, limit: int, model: str) -> str:
@@ -202,6 +288,7 @@ class QAService:
                 f"Unsupported provider '{provider}'. Use 'openai' or 'azure_openai'."
             )
         self.llm = get_llm(cfg, temperature=0.3)
+        self.llm_structured = get_llm(cfg, temperature=0.1)
 
     def _build_messages(self, question: str, contexts: List[str], structured: bool) -> List[dict]:
         system = (
@@ -238,7 +325,11 @@ class QAService:
             )
 
         if structured:
-            user += "\n\nReturn the result as valid JSON matching the ThreatModelReport schema."
+            user += (
+                "\n\nReturn the result as valid JSON matching the ThreatModelReport schema "
+                "(include erd_reference and grounding_basis on every threat_analysis item).\n"
+            )
+            user += _STRUCTURED_GROUNDING_RULES
 
         return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
@@ -278,10 +369,12 @@ class QAService:
         messages = self._build_messages(question, packed, structured)
 
         if structured:
-            tool_llm = self.llm.with_structured_output(ThreatModelReport)
+            context_blob = "\n\n".join(packed)
+            tool_llm = self.llm_structured.with_structured_output(ThreatModelReport)
             result: ThreatModelReport = tool_llm.invoke(messages)
             names = _source_filenames(bundle)
             result.sources = names or result.sources
+            result = _enforce_erd_grounding_on_report(result, context_blob)
             return result.model_dump()
 
         resp = self.llm.invoke(messages)

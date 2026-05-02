@@ -1,0 +1,16 @@
+---
+description: Run checks after meaningful edits
+alwaysApply: true
+---
+
+# Verification
+
+After non-trivial code changes:
+
+1. Run **`npm run ci`** from repo root when frontend or root scripts change.
+2. Run **`cd backend && make test`** when backend Python changes (requires deps: `pip install -r backend/requirements.txt`).
+3. Prefer **`npm run verify`** for an end-to-end local gate when both areas matter.
+
+If checks fail, fix or report—do not claim success without running them or explaining the skip.
+
+Canonical runtime versions: **`.nvmrc`**, **`backend/.python-version`**, and **`.github/workflows/ci.yml`**.

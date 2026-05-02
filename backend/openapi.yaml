@@ -260,6 +260,13 @@ components:
         severity:
           type: string
           description: Critical/High/Medium/Low
+        erd_reference:
+          type: string
+          description: Phrase from session ERD/diagram text anchoring this threat (used for grounding checks)
+        grounding_basis:
+          type: string
+          enum: [document_anchored, diagram_anchored, inferred_from_context]
+          description: Where the row is grounded in uploads
 
     AssetItem:
       type: object
@@ -331,5 +338,10 @@ components:
         sources:
           type: array
           description: Reference sources used
+          items:
+            type: string
+        discarded_ungrounded:
+          type: array
+          description: Threat candidates removed for lack of substring match to session uploads
           items:
             type: string

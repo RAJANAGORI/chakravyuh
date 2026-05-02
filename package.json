@@ -13,6 +13,8 @@
     "lint": "npm run lint --workspace=frontend",
     "typecheck": "npm run typecheck --workspace=frontend",
     "ci": "npm run lint --workspace=frontend && npm run typecheck --workspace=frontend && npm run build --workspace=frontend",
+    "verify:backend": "cd backend && make test",
+    "verify": "npm run ci && npm run verify:backend",
     "install:all": "npm install && cd backend && pip install -r requirements.txt",
     "backend": "cd backend && make api",
     "frontend": "npm run dev --workspace=frontend"

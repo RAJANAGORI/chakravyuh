@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": ".cursor/hooks/destructive_shell_guard.py"
+      }
+    ],
+    "afterShellExecution": [
+      {
+        "command": ".cursor/hooks/shell_audit.py"
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": ".cursor/hooks/tool_use_audit.py"
+      }
+    ]
+  }
+}

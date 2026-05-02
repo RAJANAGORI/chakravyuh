@@ -1,0 +1,10 @@
+---
+description: Human approval for destructive git, DB, and production actions
+alwaysApply: true
+---
+
+# High-risk confirmation
+
+- Destructive **git** or **filesystem** commands: rely on project **`beforeShellExecution`** hook prompts; do not bypass by splitting into obscure subcommands.
+- **Production** deploys, credential rotation, and schema-destroying DB changes: require an explicit **yes** from the user in chat—never infer consent.
+- For **mass refactors** across many packages, offer to split into steps or pause for review when the user did not ask for a single large blast change.

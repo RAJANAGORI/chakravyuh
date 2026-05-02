@@ -1,0 +1,11 @@
+# Keep secrets and bulky artifacts out of default AI context (complements .gitignore).
+# Do not use patterns like .env.* here — they would hide .env.example files.
+# See https://cursor.com/docs/context/ignore-files
+
+backend/.env
+frontend/.env.local
+**/.env
+**/.env.local
+**/venv/
+**/.venv/
+**/node_modules/
