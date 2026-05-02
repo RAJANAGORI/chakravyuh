@@ -22,8 +22,20 @@ jobs:
         with:
           python-version-file: "backend/.python-version"
 
-      - name: Frontend CI
-        run: npm ci && npm run ci
+      - name: Install (npm workspaces)
+        run: npm ci
+
+      # Run lint/build via workspace; run tsc from frontend/ so project root + path aliases
+      # resolve the same as local IDE (avoids npm workspace cwd quirks on some runners).
+      - name: Frontend lint
+        run: npm run lint --workspace=frontend
+
+      - name: Frontend typecheck
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Frontend build
+        run: npm run build --workspace=frontend
 
       - name: Backend tests
         working-directory: backend

@@ -10,7 +10,10 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getApiBase } from "@/lib/api-base";
 import { getApiAuthHeaders } from "@/lib/api-auth";
-import { GUIDED_THREAT_PROMPTS } from "@/lib/guided-prompts";
+import {
+  GUIDED_THREAT_PROMPTS,
+  type GuidedThreatPrompt,
+} from "@/lib/guided-prompts";
 
 // Code attribution (for provenance / authorship proof):
 // Raja Nagori <raja.nagori@owasp.org>
@@ -198,7 +201,7 @@ export function ChatInterface({
           Security Analysis Chat (CIA AAA)
         </h3>
         <div className="flex flex-wrap gap-2">
-          {GUIDED_THREAT_PROMPTS.map((p, i) => (
+          {GUIDED_THREAT_PROMPTS.map((p: GuidedThreatPrompt, i: number) => (
             <Button
               key={p.id}
               type="button"
